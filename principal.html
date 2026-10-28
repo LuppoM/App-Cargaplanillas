@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Producción - Dashboard</title>
-    <!-- Asegúrate de incluir /static/ para que cargue los estilos -->
+    <!-- Hojas de estilo estáticas -->
     <link rel="stylesheet" href="/static/principalvista.css">
+    <link rel="stylesheet" href="/static/teoricosvista.css">
 </head>
 <body>
 
@@ -18,14 +19,12 @@
                 TEÓRICOS
             </button>
 
-            <!-- Desplegable Carga Planillas -->
-            <div class="button">
-                <button class="nav-btn">
-                    CARGA PLANILLAS
-                </button>
-            </div>
+            <!-- Botón Carga Planillas -->
+            <button class="nav-btn" onclick="abrirSeccion('planillas')">
+                CARGA PLANILLAS
+            </button>
 
-            <!-- Desplegable Parámetros (Contiene Sectores) -->
+            <!-- Desplegable Parámetros -->
             <div class="dropdown">
                 <button class="nav-btn">
                     PARÁMETROS ▼
@@ -51,6 +50,48 @@
         </div>
     </main>
 
-    <script src="/static/principalmodelo.py"></script>
+    <!-- SCRIPT DE NAVEGACIÓN EMBEBIDO EN EL HTML -->
+    <script>
+        async function abrirSeccion(seccion) {
+            const contenedor = document.getElementById('app-content');
+
+            if (seccion === 'teoricos') {
+                try {
+                    // 1. Obtener la plantilla HTML del módulo de Teóricos desde el backend
+                    const respuestaHtml = await fetch('/teoricos.html');
+                    if (!respuestaHtml.ok) throw new Error("No se pudo obtener la vista de teóricos");
+                    
+                    const html = await respuestaHtml.text();
+                    contenedor.innerHTML = html;
+
+                    // 2. Ejecutar o vincular el script dinámico para cargar los datos de la tabla
+                    if (typeof cargarTeoricos === 'function') {
+                        cargarTeoricos();
+                    } else {
+                        const script = document.createElement('script');
+                        script.src = '/static/teoricos.js';
+                        script.onload = () => {
+                            if (typeof cargarTeoricos === 'function') cargarTeoricos();
+                        };
+                        document.body.appendChild(script);
+                    }
+
+                } catch (error) {
+                    console.error("Error al cargar la sección de teóricos:", error);
+                    contenedor.innerHTML = `<div class="welcome-card"><h2>Error</h2><p>No se pudo cargar el módulo de Teóricos.</p></div>`;
+                }
+            }
+        }
+
+        function abrirParametros(param) {
+            console.log(`Parámetro seleccionado: ${param}`);
+        }
+
+        function cerrarSesion() {
+            if (confirm("¿Desea cerrar la sesión?")) {
+                window.location.reload();
+            }
+        }
+    </script>
 </body>
 </html>
