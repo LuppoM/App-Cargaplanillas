@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Producción - Dashboard</title>
-    <link rel="stylesheet" href="static/principalvista.css">    <!-- Iconos opcionales (FontAwesome o Material) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Asegúrate de incluir /static/ para que cargue los estilos -->
+    <link rel="stylesheet" href="/static/principalvista.css">
 </head>
 <body>
 
-    <!-- BARRA DE NAVEGACIÓN PRINCIPAL -->
+    <!-- BARRA SUPERIOR BORGOÑA -->
     <header class="top-bar">
         <nav class="nav-container">
             
@@ -18,22 +18,10 @@
                 TEÓRICOS
             </button>
 
-            <!-- Desplegable Sectores -->
-            <div class="dropdown">
-                <button class="nav-btn dropdown-toggle">
-                    SECTORES <i class="fa-solid fa-caret-down"></i>
-                </button>
-                <div class="dropdown-menu">
-                    <a href="#" onclick="cargarSector('chocolate')">Chocolate</a>
-                    <a href="#" onclick="cargarSector('golosinas')">Golosinas</a>
-                    <a href="#" onclick="cargarSector('empaque')">Empaque</a>
-                </div>
-            </div>
-
             <!-- Desplegable Carga Planillas -->
             <div class="dropdown">
-                <button class="nav-btn dropdown-toggle">
-                    CARGA PLANILLAS <i class="fa-solid fa-caret-down"></i>
+                <button class="nav-btn">
+                    CARGA PLANILLAS ▼
                 </button>
                 <div class="dropdown-menu">
                     <a href="#" onclick="abrirPlanilla('diaria')">Planilla Diaria</a>
@@ -42,13 +30,14 @@
                 </div>
             </div>
 
-            <!-- Desplegable Parámetros -->
+            <!-- Desplegable Parámetros (Contiene Sectores) -->
             <div class="dropdown">
-                <button class="nav-btn dropdown-toggle">
-                    PARÁMETROS <i class="fa-solid fa-caret-down"></i>
+                <button class="nav-btn">
+                    PARÁMETROS ▼
                 </button>
                 <div class="dropdown-menu">
-                    <a href="#" onclick="abrirParametros('lineas')">Líneas / Centros de Trabajo</a>
+                    <a href="#" onclick="abrirParametros('sectores')">Sectores / Plantas</a>
+                    <a href="#" onclick="abrirParametros('lineas')">Líneas de Trabajo</a>
                     <a href="#" onclick="abrirParametros('eficiencias')">Eficiencias STD</a>
                     <a href="#" onclick="abrirParametros('dotaciones')">Dotaciones Teóricas</a>
                 </div>
@@ -70,6 +59,6 @@
         </div>
     </main>
 
-    <script src="principalmodelo.js"></script>
+    <script src="/static/principalmodelo.py"></script>
 </body>
 </html>
