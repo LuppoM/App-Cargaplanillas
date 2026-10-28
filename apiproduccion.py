@@ -30,63 +30,7 @@ def get_db_connection():
         print(f"Error conectando a Neon DB: {e}")
         raise HTTPException(status_code=500, detail="Error de conexión con la base de datos")
 
-# --- ENDPOINTS DE LA API ---
-
-@app.get("/api/teoricos")
-def obtener_teoricos(limit: int = 100):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("""
-            SELECT codigo, descripcion, planta, centro_trabajo, bultos_hora, kg_teoricos 
-            FROM teoricos 
-            LIMIT %s;
-        """, (limit,))
-        return cursor.fetchall()
-    finally:
-        cursor.close()
-        conn.close()
-
-@app.get("/api/teoricos/{codigo}")
-def obtener_teorico_codigo(codigo: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT * FROM teoricos WHERE codigo = %s;", (codigo,))
-        resultado = cursor.fetchone()
-        if not resultado:
-            raise HTTPException(status_code=404, detail="Teórico no encontrado")
-        return resultado
-    finally:
-        cursor.close()
-        conn.close()
-
-@app.get("/api/sectores/{sector}")
-def obtener_datos_sector(sector: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT * FROM teoricos WHERE LOWER(planta) = LOWER(%s) LIMIT 100;", (sector,))
-        return cursor.fetchall()
-    finally:
-        cursor.close()
-        conn.close()
-
-# --- RUTA PARA CARGAR EL FRONTEND (principal.html) ---
-
-@app.get("/")
-def cargar_principal():
-    """Sirve la pantalla principal HTML al ingresar al servidor"""
-    if os.path.exists("principal.html"):
-        return FileResponse("principal.html")
-    raise HTTPException(status_code=404, detail="Archivo principal.html no encontrado")
-
-# Servir archivos estáticos (CSS, JS, imágenes) desde la raíz del proyecto
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# --- ENDPOINTS DE LA API (TEÓRICOS) ---
 
 @app.get("/api/teoricos")
 def listar_teoricos():
@@ -112,3 +56,37 @@ def actualizar_teorico(id_teorico: int, datos: dict):
     if not exito:
         raise HTTPException(status_code=400, detail="Error al actualizar el teórico")
     return {"status": "ok", "message": "Teórico actualizado correctamente"}
+
+@app.get("/api/sectores/{sector}")
+def obtener_datos_sector(sector: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM teoricos WHERE LOWER(planta) = LOWER(%s) LIMIT 100;", (sector,))
+        return cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
+
+# --- RUTAS PARA SERVIR VISTAS HTML ---
+
+@app.get("/")
+def cargar_principal():
+    """Sirve la pantalla principal HTML"""
+    if os.path.exists("principal.html"):
+        return FileResponse("principal.html")
+    raise HTTPException(status_code=404, detail="Archivo principal.html no encontrado")
+
+@app.get("/teoricos.html")
+def cargar_teoricos_html():
+    """Sirve el módulo HTML de teóricos"""
+    if os.path.exists("teoricos.html"):
+        return FileResponse("teoricos.html")
+    raise HTTPException(status_code=404, detail="Archivo teoricos.html no encontrado")
+
+# --- MONTAR ARCHIVOS ESTÁTICOS (DEBE IR AL FINAL) ---
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
