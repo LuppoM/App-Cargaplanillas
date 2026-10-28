@@ -79,12 +79,12 @@ def cargar_principal():
 
 @app.get("/teoricos.html")
 def cargar_teoricos_html():
-    """Sirve el módulo HTML de teóricos"""
+    """Sirve la pantalla completa independiente de teóricos"""
     if os.path.exists("teoricos.html"):
         return FileResponse("teoricos.html")
     raise HTTPException(status_code=404, detail="Archivo teoricos.html no encontrado")
 
-# --- MONTAR ARCHIVOS ESTÁTICOS (DEBE IR AL FINAL) ---
+# --- MONTAR ARCHIVOS ESTÁTICOS (DEBE IR SIEMPRE AL FINAL) ---
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 if __name__ == "__main__":
