@@ -27,18 +27,17 @@ app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), na
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     """Carga la pantalla principal de la aplicación."""
-    if os.path.exists(os.path.join(BASE_DIR, "principal.html")):
-        return templates.TemplateResponse(request, "principal.html", {})
-    return FileResponse(os.path.join(BASE_DIR, "principal.html"))
+    return templates.TemplateResponse(request, "principal.html", {})
+
 
 
 @app.get("/teoricos", response_class=HTMLResponse)
 def vista_teoricos(request: Request):
     """Carga la pantalla independiente de Teóricos."""
     ruta_html = os.path.join(BASE_DIR, "teoricos.html")
-    if os.path.exists(ruta_html):
-        return templates.TemplateResponse("teoricos.html", {"request": request})
-    raise HTTPException(status_code=404, detail="El archivo teoricos.html no existe")
+
+    return templates.TemplateResponse("teoricos.html", {"request": request})
+  
 
 
 # ==========================================
