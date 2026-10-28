@@ -14,29 +14,40 @@
 <body>
 
     <div class="top-bar">
-        <div class="nav-container">
+    <div class="nav-container">
 
-            <!-- 1. BOTÓN DIRECTO: TEÓRICOS -->
-            <a href="/teoricos" class="nav-btn">TEÓRICOS</a>
+        <!-- 1. BOTÓN DIRECTO: TEÓRICOS -->
+        <a href="/teoricos" class="nav-btn">TEÓRICOS</a>
 
-            <!-- 2. MENÚ DESPLEGABLE: CARGA PLANILLAS -->
-            <div class="button
-                <button class="nav-btn" onclick="toggleDropdown(event, 'menuPlanillas')">
-                    CARGA PLANILLAS
-                </button>
+        <!-- 2. MENÚ DESPLEGABLE: CARGA PLANILLAS -->
+        <div class="dropdown">
+            <button class="nav-btn" onclick="toggleDropdown(event, 'menuPlanillas')">
+                CARGA PLANILLAS ▼
+            </button>
+            <div id="menuPlanillas" class="dropdown-menu">
+                <a href="/planilladiaria">Planilla Diaria</a>
+                <a href="/planillaturnos">Planilla por Turnos</a>
+                <a href="/registroparadas">Registro de Paradas</a>
             </div>
+        </div>
 
-            <!-- 3. MENÚ DESPLEGABLE: PARÁMETROS -->
-            <div class="dropdown">
-                <button class="nav-btn" onclick="toggleDropdown(event, 'menuParametros')">
-                    PARÁMETROS ▼
-                </button>
-                <div id="menuParametros" class="dropdown-menu">
-                    <a href="/sectores">Sectores</a>
-                    <a href="/lineas">Líneas de Trabajo</a>
-                    <a href="/dotaciones">Dotaciones Teóricas</a>
-                </div>
+        <!-- 3. MENÚ DESPLEGABLE: PARÁMETROS -->
+        <div class="dropdown">
+            <button class="nav-btn" onclick="toggleDropdown(event, 'menuParametros')">
+                PARÁMETROS ▼
+            </button>
+            <div id="menuParametros" class="dropdown-menu">
+                <a href="/sectores">Sectores</a>
+                <a href="/lineas">Líneas de Trabajo</a>
+                <a href="/dotaciones">Dotaciones Teóricas</a>
             </div>
+        </div>
+
+        <!-- 4. BOTÓN DIRECTO: SALIR -->
+        <a href="/" class="nav-btn btn-salir">SALIR</a>
+
+    </div>
+</div>
 
             <!-- 4. BOTÓN DIRECTO: SALIR -->
             <a href="/" class="nav-btn btn-salir">SALIR</a>
