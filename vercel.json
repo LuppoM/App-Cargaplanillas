@@ -1,0 +1,30 @@
+{
+  "builds": [
+    {
+      "src": "apiproduccion.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "static/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "principal.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "apiproduccion.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "principal.html"
+    }
+  ]
+}
