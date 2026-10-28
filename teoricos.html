@@ -9,18 +9,17 @@
 <body>
 
     <div class="teoricos-screen">
-        
-        <!-- ENCABEZADO Y BOTONES DE ACCIÓN DE LA PANTALLA -->
+        <!-- ENCABEZADO Y BOTONES DE ACCIÓN -->
         <header class="top-header">
             <h1>GESTIÓN DE TEÓRICOS DE PRODUCCIÓN</h1>
             <div class="toolbar">
-                <button class="btn-tool btn-nuevo" onclick="abrirFormulario()">Agregar</button>
-                <button class="btn-tool btn-cerrar-pantalla" onclick="window.location.href='/'">Cerrar</button>
+                <button class="btn-tool btn-nuevo" onclick="abrirFormulario()">+ Nuevo Teórico</button>
+                <button class="btn-tool btn-cerrar-pantalla" onclick="window.location.href='/'">Volver</button>
             </div>
             
             <div class="filtros-bar">
-                <label for="input-buscar">Filtro:</label>
-                <input type="text" id="input-buscar" placeholder="Buscar por código, descripción o centro..." onkeyup="filtrarTabla()">
+                <label for="input-buscar">Buscar:</label>
+                <input type="text" id="input-buscar" placeholder="Código, descripción, centro..." onkeyup="filtrarTabla()">
             </div>
         </header>
 
@@ -29,30 +28,29 @@
             <table class="tabla-teoricos" id="tabla-teoricos">
                 <thead>
                     <tr>
-                        <th>id</th>
-                        <th>planta</th>
-                        <th>estado</th>
-                        <th>codigo</th>
-                        <th>descripcion</th>
-                        <th>bultos_hora</th>
-                        <th>dotacion</th>
-                        <th>centro_trabajo</th>
-                        <th>uxb</th>
-                        <th>peso</th>
-                        <th>kg_teoricos</th>
-                        <th>flex_unid_kg</th>
-                        <th>acciones</th>
+                        <th>ID</th>
+                        <th>Planta</th>
+                        <th>Estado</th>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Bultos/H</th>
+                        <th>Dotación</th>
+                        <th>Centro Trabajo</th>
+                        <th>UXB</th>
+                        <th>Peso</th>
+                        <th>Kg Teóricos</th>
+                        <th>Flex Unid (kg)</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-teoricos">
-                    <!-- Se llena con JS mediante la API -->
+                    <!-- Carga dinámica -->
                 </tbody>
             </table>
         </main>
-
     </div>
 
-    <!-- FORMULARIO / MODAL (AGREGAR / MODIFICAR) -->
+    <!-- MODAL (FORMULARIO CREAR / EDITAR) -->
     <div id="modal-teorico" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -131,6 +129,131 @@
         </div>
     </div>
 
-    <script src="/static/teoricos.js"></script>
+    <!-- SCRIPT INLINE (SIN ARCHIVOS EXTERNOS) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarTeoricos();
+        });
+
+        async function cargarTeoricos() {
+            try {
+                const res = await fetch('/api/teoricos');
+                const data = await res.json();
+                
+                const datos = Array.isArray(data) ? data : (data.datos || []);
+                const tbody = document.getElementById('tbody-teoricos');
+                if (!tbody) return;
+                
+                tbody.innerHTML = '';
+
+                if (datos.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;">No hay registros cargados.</td></tr>`;
+                    return;
+                }
+
+                datos.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${item.id || ''}</td>
+                        <td>${item.planta || ''}</td>
+                        <td>${item.estado || ''}</td>
+                        <td><strong>${item.codigo || ''}</strong></td>
+                        <td>${item.descripcion || ''}</td>
+                        <td>${item.bultos_hora || 0}</td>
+                        <td>${item.dotacion || 0}</td>
+                        <td>${item.centro_trabajo || ''}</td>
+                        <td>${item.uxb || 0}</td>
+                        <td>${item.peso || 0}</td>
+                        <td>${item.kg_teoricos || 0}</td>
+                        <td>${item.flex_unid_kg || 0}</td>
+                        <td>
+                            <button class="btn-tool" onclick='editarTeorico(${JSON.stringify(item)})'>Editar</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error("Error al cargar teóricos:", err);
+            }
+        }
+
+        function abrirFormulario() {
+            document.getElementById('form-teorico').reset();
+            document.getElementById('teorico-id').value = '';
+            document.getElementById('modal-titulo').innerText = 'Nuevo Teórico';
+            document.getElementById('modal-teorico').style.display = 'flex';
+        }
+
+        function cerrarFormulario() {
+            document.getElementById('modal-teorico').style.display = 'none';
+        }
+
+        function filtrarTabla() {
+            const filtro = document.getElementById('input-buscar').value.toLowerCase();
+            const filas = document.querySelectorAll('#tbody-teoricos tr');
+
+            filas.forEach(fila => {
+                const texto = fila.innerText.toLowerCase();
+                fila.style.display = texto.includes(filtro) ? '' : 'none';
+            });
+        }
+
+        function editarTeorico(item) {
+            document.getElementById('teorico-id').value = item.id;
+            document.getElementById('planta').value = item.planta;
+            document.getElementById('estado').value = item.estado;
+            document.getElementById('codigo').value = item.codigo;
+            document.getElementById('descripcion').value = item.descripcion;
+            document.getElementById('bultos_hora').value = item.bultos_hora;
+            document.getElementById('dotacion').value = item.dotacion;
+            document.getElementById('centro_trabajo').value = item.centro_trabajo;
+            document.getElementById('uxb').value = item.uxb;
+            document.getElementById('peso').value = item.peso;
+            document.getElementById('kg_teoricos').value = item.kg_teoricos;
+            document.getElementById('flex_unid_kg').value = item.flex_unid_kg;
+
+            document.getElementById('modal-titulo').innerText = 'Editar Teórico';
+            document.getElementById('modal-teorico').style.display = 'flex';
+        }
+
+        async function guardarTeorico(event) {
+            event.preventDefault();
+            
+            const id = document.getElementById('teorico-id').value;
+            const datos = {
+                planta: document.getElementById('planta').value,
+                estado: document.getElementById('estado').value,
+                codigo: document.getElementById('codigo').value,
+                descripcion: document.getElementById('descripcion').value,
+                bultos_hora: parseFloat(document.getElementById('bultos_hora').value) || 0,
+                dotacion: parseFloat(document.getElementById('dotacion').value) || 0,
+                centro_trabajo: document.getElementById('centro_trabajo').value,
+                uxb: parseFloat(document.getElementById('uxb').value) || 0,
+                peso: parseFloat(document.getElementById('peso').value) || 0,
+                kg_teoricos: parseFloat(document.getElementById('kg_teoricos').value) || 0,
+                flex_unid_kg: parseFloat(document.getElementById('flex_unid_kg').value) || 0
+            };
+
+            const url = id ? `/api/teoricos/${id}` : '/api/teoricos';
+            const metodo = id ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: metodo,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+
+                if (res.ok) {
+                    cerrarFormulario();
+                    cargarTeoricos();
+                } else {
+                    alert("Error al guardar el registro.");
+                }
+            } catch (err) {
+                console.error("Error al guardar:", err);
+            }
+        }
+    </script>
 </body>
 </html>
