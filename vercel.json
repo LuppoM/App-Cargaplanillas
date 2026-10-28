@@ -1,12 +1,15 @@
 {
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/static/(.*)",
-      "destination": "/static/$1"
-    },
+      "src": "apiproduccion.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/apiproduccion.py"
+      "src": "/(.*)",
+      "dest": "apiproduccion.py"
     }
   ]
 }
