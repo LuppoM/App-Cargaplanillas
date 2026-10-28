@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Producción - Dashboard</title>
+    <link rel="stylesheet" href="principalvista.css">
+    <!-- Iconos opcionales (FontAwesome o Material) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- BARRA DE NAVEGACIÓN PRINCIPAL -->
+    <header class="top-bar">
+        <nav class="nav-container">
+            
+            <!-- Botón Teóricos -->
+            <button class="nav-btn" onclick="abrirSeccion('teoricos')">
+                TEÓRICOS
+            </button>
+
+            <!-- Desplegable Sectores -->
+            <div class="dropdown">
+                <button class="nav-btn dropdown-toggle">
+                    SECTORES <i class="fa-solid fa-caret-down"></i>
+                </button>
+                <div class="dropdown-menu">
+                    <a href="#" onclick="cargarSector('chocolate')">Chocolate</a>
+                    <a href="#" onclick="cargarSector('golosinas')">Golosinas</a>
+                    <a href="#" onclick="cargarSector('empaque')">Empaque</a>
+                </div>
+            </div>
+
+            <!-- Desplegable Carga Planillas -->
+            <div class="dropdown">
+                <button class="nav-btn dropdown-toggle">
+                    CARGA PLANILLAS <i class="fa-solid fa-caret-down"></i>
+                </button>
+                <div class="dropdown-menu">
+                    <a href="#" onclick="abrirPlanilla('diaria')">Planilla Diaria</a>
+                    <a href="#" onclick="abrirPlanilla('turnos')">Planilla por Turnos</a>
+                    <a href="#" onclick="abrirPlanilla('paradas')">Registro de Paradas</a>
+                </div>
+            </div>
+
+            <!-- Desplegable Parámetros -->
+            <div class="dropdown">
+                <button class="nav-btn dropdown-toggle">
+                    PARÁMETROS <i class="fa-solid fa-caret-down"></i>
+                </button>
+                <div class="dropdown-menu">
+                    <a href="#" onclick="abrirParametros('lineas')">Líneas / Centros de Trabajo</a>
+                    <a href="#" onclick="abrirParametros('eficiencias')">Eficiencias STD</a>
+                    <a href="#" onclick="abrirParametros('dotaciones')">Dotaciones Teóricas</a>
+                </div>
+            </div>
+
+            <!-- Botón Salir -->
+            <button class="nav-btn btn-salir" onclick="cerrarSesion()">
+                SALIR
+            </button>
+
+        </nav>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main id="app-content" class="content-container">
+        <div class="welcome-card">
+            <h2>Sistema de Gestión de Producción</h2>
+            <p>Seleccione una opción del menú superior para comenzar.</p>
+        </div>
+    </main>
+
+    <script src="principalmodelo.js"></script>
+</body>
+</html>
