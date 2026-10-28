@@ -9,48 +9,50 @@
 <body>
 
     <div class="teoricos-screen">
-        <!-- ENCABEZADO Y BOTONES DE ACCIÓN -->
+        
+        <!-- ENCABEZADO SUPERIOR -->
         <header class="top-header">
             <h1>GESTIÓN DE TEÓRICOS DE PRODUCCIÓN</h1>
+            
             <div class="toolbar">
-                <button class="btn-tool btn-nuevo" onclick="abrirFormulario()">+ Nuevo Teórico</button>
-                <button class="btn-tool btn-cerrar-pantalla" onclick="window.location.href='/'">Volver</button>
+                <button class="btn-tool" onclick="abrirFormulario()">+ Nuevo Teórico</button>
+                <a href="/" class="btn-tool btn-cerrar-pantalla" style="text-decoration: none; display: inline-block;">Volver</a>
             </div>
             
             <div class="filtros-bar">
                 <label for="input-buscar">Buscar:</label>
-                <input type="text" id="input-buscar" placeholder="Código, descripción, centro..." onkeyup="filtrarTabla()">
+                <input type="text" id="input-buscar" placeholder="Buscar por código, descripción, centro..." onkeyup="filtrarTabla()">
             </div>
         </header>
 
-        <!-- TABLA DE DATOS -->
+        <!-- TABLA A PANTALLA COMPLETA -->
         <main class="tabla-container">
-            <table class="tabla-teoricos" id="tabla-teoricos">
+            <table class="tabla-teoricos">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Planta</th>
-                        <th>Estado</th>
-                        <th>Código</th>
-                        <th>Descripción</th>
-                        <th>Bultos/H</th>
-                        <th>Dotación</th>
-                        <th>Centro Trabajo</th>
-                        <th>UXB</th>
-                        <th>Peso</th>
-                        <th>Kg Teóricos</th>
-                        <th>Flex Unid (kg)</th>
-                        <th>Acciones</th>
+                        <th>id</th>
+                        <th>planta</th>
+                        <th>estado</th>
+                        <th>codigo</th>
+                        <th>descripcion</th>
+                        <th>bultos_hora</th>
+                        <th>dotacion</th>
+                        <th>centro_trabajo</th>
+                        <th>uxb</th>
+                        <th>peso</th>
+                        <th>kg_teoricos</th>
+                        <th>flex_unid_kg</th>
+                        <th>acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-teoricos">
-                    <!-- Carga dinámica -->
+                    <!-- Registros dinámicos -->
                 </tbody>
             </table>
         </main>
     </div>
 
-    <!-- MODAL (FORMULARIO CREAR / EDITAR) -->
+    <!-- MODAL Y FORMULARIO -->
     <div id="modal-teorico" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -59,7 +61,7 @@
             </div>
             
             <form id="form-teorico" onsubmit="guardarTeorico(event)">
-                <input type="hidden" id="teorico-id" name="id">
+                <input type="hidden" id="teorico-id">
 
                 <div class="form-grid">
                     <div class="form-group">
@@ -72,32 +74,32 @@
 
                     <div class="form-group">
                         <label>Estado</label>
-                        <input type="text" id="estado" placeholder="Ej: SE, PT" required>
+                        <input type="text" id="estado" required>
                     </div>
 
                     <div class="form-group">
-                        <label>Código Producto</label>
+                        <label>Código</label>
                         <input type="text" id="codigo" required>
                     </div>
 
                     <div class="form-group full-width">
-                        <label>Descripción de Producto</label>
+                        <label>Descripción</label>
                         <input type="text" id="descripcion" required>
                     </div>
 
                     <div class="form-group">
                         <label>Bultos / Hora</label>
-                        <input type="number" step="0.0001" id="bultos_hora" required>
+                        <input type="number" step="0.0001" id="bultos_hora">
                     </div>
 
                     <div class="form-group">
                         <label>Dotación</label>
-                        <input type="number" step="0.5" id="dotacion" required>
+                        <input type="number" step="0.5" id="dotacion">
                     </div>
 
                     <div class="form-group">
                         <label>Centro de Trabajo</label>
-                        <input type="text" id="centro_trabajo" required>
+                        <input type="text" id="centro_trabajo">
                     </div>
 
                     <div class="form-group">
@@ -123,33 +125,22 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn-cancelar" onclick="cerrarFormulario()">Cancelar</button>
-                    <button type="submit" class="btn-guardar">Guardar Registro</button>
+                    <button type="submit" class="btn-guardar">Guardar</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- SCRIPT INLINE (SIN ARCHIVOS EXTERNOS) -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            cargarTeoricos();
-        });
+        document.addEventListener('DOMContentLoaded', cargarTeoricos);
 
         async function cargarTeoricos() {
             try {
                 const res = await fetch('/api/teoricos');
-                const data = await res.json();
-                
-                const datos = Array.isArray(data) ? data : (data.datos || []);
+                const resJson = await res.json();
+                const datos = resJson.datos || [];
                 const tbody = document.getElementById('tbody-teoricos');
-                if (!tbody) return;
-                
                 tbody.innerHTML = '';
-
-                if (datos.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;">No hay registros cargados.</td></tr>`;
-                    return;
-                }
 
                 datos.forEach(item => {
                     const tr = document.createElement('tr');
@@ -172,8 +163,8 @@
                     `;
                     tbody.appendChild(tr);
                 });
-            } catch (err) {
-                console.error("Error al cargar teóricos:", err);
+            } catch (e) {
+                console.error("Error al cargar teóricos:", e);
             }
         }
 
@@ -191,36 +182,33 @@
         function filtrarTabla() {
             const filtro = document.getElementById('input-buscar').value.toLowerCase();
             const filas = document.querySelectorAll('#tbody-teoricos tr');
-
-            filas.forEach(fila => {
-                const texto = fila.innerText.toLowerCase();
-                fila.style.display = texto.includes(filtro) ? '' : 'none';
+            filas.forEach(f => {
+                f.style.display = f.innerText.toLowerCase().includes(filtro) ? '' : 'none';
             });
         }
 
         function editarTeorico(item) {
             document.getElementById('teorico-id').value = item.id;
-            document.getElementById('planta').value = item.planta;
-            document.getElementById('estado').value = item.estado;
-            document.getElementById('codigo').value = item.codigo;
-            document.getElementById('descripcion').value = item.descripcion;
-            document.getElementById('bultos_hora').value = item.bultos_hora;
-            document.getElementById('dotacion').value = item.dotacion;
-            document.getElementById('centro_trabajo').value = item.centro_trabajo;
-            document.getElementById('uxb').value = item.uxb;
-            document.getElementById('peso').value = item.peso;
-            document.getElementById('kg_teoricos').value = item.kg_teoricos;
-            document.getElementById('flex_unid_kg').value = item.flex_unid_kg;
+            document.getElementById('planta').value = item.planta || 'chocolate';
+            document.getElementById('estado').value = item.estado || '';
+            document.getElementById('codigo').value = item.codigo || '';
+            document.getElementById('descripcion').value = item.descripcion || '';
+            document.getElementById('bultos_hora').value = item.bultos_hora || 0;
+            document.getElementById('dotacion').value = item.dotacion || 0;
+            document.getElementById('centro_trabajo').value = item.centro_trabajo || '';
+            document.getElementById('uxb').value = item.uxb || 0;
+            document.getElementById('peso').value = item.peso || 0;
+            document.getElementById('kg_teoricos').value = item.kg_teoricos || 0;
+            document.getElementById('flex_unid_kg').value = item.flex_unid_kg || 0;
 
             document.getElementById('modal-titulo').innerText = 'Editar Teórico';
             document.getElementById('modal-teorico').style.display = 'flex';
         }
 
-        async function guardarTeorico(event) {
-            event.preventDefault();
-            
+        async function guardarTeorico(e) {
+            e.preventDefault();
             const id = document.getElementById('teorico-id').value;
-            const datos = {
+            const payload = {
                 planta: document.getElementById('planta').value,
                 estado: document.getElementById('estado').value,
                 codigo: document.getElementById('codigo').value,
@@ -235,23 +223,19 @@
             };
 
             const url = id ? `/api/teoricos/${id}` : '/api/teoricos';
-            const metodo = id ? 'PUT' : 'POST';
+            const method = id ? 'PUT' : 'POST';
 
-            try {
-                const res = await fetch(url, {
-                    method: metodo,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(datos)
-                });
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-                if (res.ok) {
-                    cerrarFormulario();
-                    cargarTeoricos();
-                } else {
-                    alert("Error al guardar el registro.");
-                }
-            } catch (err) {
-                console.error("Error al guardar:", err);
+            if (res.ok) {
+                cerrarFormulario();
+                cargarTeoricos();
+            } else {
+                alert("Error al guardar registro.");
             }
         }
     </script>
