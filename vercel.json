@@ -1,30 +1,12 @@
 {
-  "builds": [
+  "rewrites": [
     {
-      "src": "apiproduccion.py",
-      "use": "@vercel/python"
+      "source": "/static/(.*)",
+      "destination": "/static/$1"
     },
     {
-      "src": "static/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "principal.html",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/static/(.*)",
-      "dest": "/static/$1"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "apiproduccion.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "principal.html"
+      "source": "/(.*)",
+      "destination": "/apiproduccion.py"
     }
   ]
 }
