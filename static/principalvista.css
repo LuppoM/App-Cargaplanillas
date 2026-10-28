@@ -12,37 +12,39 @@ body {
     min-height: 100vh;
 }
 
-/* BARRA SUPERIOR */
+/* BARRA SUPERIOR BORGOÑA */
 .top-bar {
-    background-color: #8b4356; /* Tono borgoña/vinotinto exacto de la imagen */
-    padding: 12px 20px;
+    background-color: #8b4356 !important;
+    padding: 14px 20px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    width: 100%;
 }
 
 .nav-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 12px;
+    gap: 15px;
     flex-wrap: wrap;
 }
 
-/* BOTONES PRINCIPALES */
+/* BOTONES PRINCIPALES REDONDEADOS */
 .nav-btn {
-    background-color: #f2e9ea; /* Tono claro rosado/grisáceo */
-    color: #1a2a3a; /* Azul marino */
+    background-color: #f2e9ea;
+    color: #1a2a3a;
     border: none;
-    padding: 10px 22px;
+    padding: 10px 24px;
     border-radius: 10px;
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.5px;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    outline: none;
 }
 
 .nav-btn:hover {
@@ -55,7 +57,7 @@ body {
     transform: translateY(0);
 }
 
-/* SUBMENÚS DESPLEGABLES (DROPDOWNS) */
+/* MENÚS DESPLEGABLES (DROPDOWNS) */
 .dropdown {
     position: relative;
     display: inline-block;
@@ -68,8 +70,8 @@ body {
     left: 0;
     margin-top: 6px;
     background-color: #ffffff;
-    min-width: 200px;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    min-width: 220px;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
     border-radius: 8px;
     overflow: hidden;
     z-index: 1000;
@@ -95,23 +97,28 @@ body {
     color: #8b4356;
 }
 
-/* Mostrar dropdown al pasar el cursor */
+/* Desplegar al pasar el mouse */
 .dropdown:hover .dropdown-menu {
     display: block;
 }
 
-/* CONTENEDOR DE CONTENIDO */
+/* CONTENEDOR PRINCIPAL DE CONTENIDO */
 .content-container {
-    padding: 30px;
-    max-width: 1400px;
+    padding: 40px 20px;
+    max-width: 1200px;
     margin: 0 auto;
 }
 
 .welcome-card {
-    background: white;
+    background: #ffffff;
     padding: 40px;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     text-align: center;
     color: #1a2a3a;
+}
+
+.welcome-card h2 {
+    margin-bottom: 12px;
+    font-size: 24px;
 }
