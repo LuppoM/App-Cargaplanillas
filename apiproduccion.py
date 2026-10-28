@@ -32,7 +32,7 @@ def home(request: Request):
     return FileResponse(os.path.join(BASE_DIR, "principal.html"))
 
 
-@app.get("/teoricos.html", response_class=HTMLResponse)
+@app.get("/teoricos", response_class=HTMLResponse)
 def vista_teoricos(request: Request):
     """Carga la pantalla independiente de Teóricos."""
     if os.path.exists(os.path.join(BASE_DIR, "teoricos.html")):
