@@ -1,91 +1,125 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from datetime import date
+from io import BytesIO
 import os
+from typing import Optional
+
+from fastapi import Body, FastAPI, Request, HTTPException
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+import conexion
 from teoricosmodelo import TeoricosModelo
 
-app = FastAPI(title="API Producción - Neon DB")
+app = FastAPI(title="API PRODUCCIÓN - PLANILLAS Y TEÓRICOS")
 
-# Permite peticiones CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=BASE_DIR)
 
-DB_URI = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://neondb_owner:npg_VTaNm6UcG2Wf@ep-still-hat-b51xgwyc-pooler.c-7.us-east-2.aws.neon.tech/produccion?sslmode=require"
-)
+# Montar archivos estáticos y assets
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
-def get_db_connection():
-    try:
-        return psycopg2.connect(DB_URI, cursor_factory=RealDictCursor)
-    except Exception as e:
-        print(f"Error conectando a Neon DB: {e}")
-        raise HTTPException(status_code=500, detail="Error de conexión con la base de datos")
 
-# --- ENDPOINTS DE LA API (TEÓRICOS) ---
+# ==========================================
+# 1. VISTAS HTML PRINCIPALES (RUTAS DIRECTAS)
+# ==========================================
 
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request):
+    """Carga la pantalla principal de la aplicación."""
+    if os.path.exists(os.path.join(BASE_DIR, "principal.html")):
+        return templates.TemplateResponse(request, "principal.html", {})
+    return FileResponse(os.path.join(BASE_DIR, "principal.html"))
+
+
+@app.get("/teoricos.html", response_class=HTMLResponse)
+def vista_teoricos(request: Request):
+    """Carga la pantalla independiente de Teóricos."""
+    if os.path.exists(os.path.join(BASE_DIR, "teoricos.html")):
+        return templates.TemplateResponse(request, "teoricos.html", {})
+    return FileResponse(os.path.join(BASE_DIR, "teoricos.html"))
+
+
+# ==========================================
+# 2. MÓDULO: TEÓRICOS (ENDPOINTS DE API)
+# ==========================================
+
+@app.get("/api/teoricos/datos")
 @app.get("/api/teoricos")
-def listar_teoricos():
-    return TeoricosModelo.obtener_todos()
+def api_obtener_teoricos():
+    """Retorna la lista completa de teóricos desde el modelo."""
+    try:
+        datos = TeoricosModelo.obtener_todos()
+        return {"status": "ok", "datos": datos}
+    except Exception as e:
+        print(f"Error en /api/teoricos: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.get("/api/teoricos/obtener/{id_teorico}")
 @app.get("/api/teoricos/{id_teorico}")
-def obtener_teorico(id_teorico: int):
-    teorico = TeoricosModelo.obtener_por_id(id_teorico)
-    if not teorico:
-        raise HTTPException(status_code=404, detail="Registro no encontrado")
-    return teorico
+def api_obtener_teorico_por_id(id_teorico: int):
+    """Obtiene un registro teórico individual por su ID."""
+    try:
+        teorico = TeoricosModelo.obtener_por_id(id_teorico)
+        if not teorico:
+            return {"status": "error", "mensaje": "Teórico no encontrado"}
+        return {"status": "ok", "data": teorico}
+    except Exception as e:
+        print(f"Error obteniendo teórico {id_teorico}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.post("/api/teoricos/guardar")
 @app.post("/api/teoricos")
-def crear_teorico(datos: dict):
-    exito = TeoricosModelo.insertar(datos)
-    if not exito:
-        raise HTTPException(status_code=400, detail="Error al guardar el teórico")
-    return {"status": "ok", "message": "Teórico creado correctamente"}
+def api_guardar_teorico(payload: dict = Body(...)):
+    """Crea un nuevo registro o actualiza uno existente según contenga 'id'."""
+    id_reg = payload.get("id") or payload.get("datos", {}).get("id")
+    datos = payload.get("datos", payload)
+
+    try:
+        if id_reg:
+            exito = TeoricosModelo.actualizar(int(id_reg), datos)
+            msg_error = "No se pudo actualizar el teórico en la base de datos."
+        else:
+            exito = TeoricosModelo.insertar(datos)
+            msg_error = "No se pudo insertar el teórico en la base de datos."
+
+        if exito:
+            return {"status": "ok", "message": "Registro guardado correctamente."}
+        return {"status": "error", "message": msg_error}
+    except Exception as e:
+        print(f"Error en guardar teórico: {e}")
+        return {"status": "error", "message": str(e)}
+
 
 @app.put("/api/teoricos/{id_teorico}")
-def actualizar_teorico(id_teorico: int, datos: dict):
-    exito = TeoricosModelo.actualizar(id_teorico, datos)
-    if not exito:
-        raise HTTPException(status_code=400, detail="Error al actualizar el teórico")
-    return {"status": "ok", "message": "Teórico actualizado correctamente"}
+def api_actualizar_teorico_put(id_teorico: int, payload: dict = Body(...)):
+    """Endpoint PUT tradicional para actualizar teóricos."""
+    try:
+        exito = TeoricosModelo.actualizar(id_teorico, payload)
+        if exito:
+            return {"status": "ok", "message": "Teórico actualizado correctamente."}
+        return {"status": "error", "message": "Error al actualizar registro."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 
 @app.get("/api/sectores/{sector}")
-def obtener_datos_sector(sector: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+def api_obtener_datos_sector(sector: str):
+    """Consulta teóricos filtrados por planta/sector."""
     try:
+        conn = conexion.obtener_conexion()
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM teoricos WHERE LOWER(planta) = LOWER(%s) LIMIT 100;", (sector,))
-        return cursor.fetchall()
-    finally:
+        datos = cursor.fetchall()
         cursor.close()
         conn.close()
+        return {"status": "ok", "datos": datos}
+    except Exception as e:
+        print(f"Error obteniendo sector {sector}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# --- RUTAS PARA SERVIR VISTAS HTML ---
-
-@app.get("/")
-def cargar_principal():
-    """Sirve la pantalla principal HTML"""
-    if os.path.exists("principal.html"):
-        return FileResponse("principal.html")
-    raise HTTPException(status_code=404, detail="Archivo principal.html no encontrado")
-
-@app.get("/teoricos.html")
-def cargar_teoricos_html():
-    """Sirve la pantalla completa independiente de teóricos"""
-    if os.path.exists("teoricos.html"):
-        return FileResponse("teoricos.html")
-    raise HTTPException(status_code=404, detail="Archivo teoricos.html no encontrado")
-
-# --- MONTAR ARCHIVOS ESTÁTICOS (DEBE IR SIEMPRE AL FINAL) ---
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 if __name__ == "__main__":
     import uvicorn
