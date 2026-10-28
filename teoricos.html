@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Teóricos</title>
+    <link rel="stylesheet" href="/static/teoricosvista.css">
+</head>
+<body>
+
+    <div class="teoricos-screen">
+        
+        <!-- ENCABEZADO Y BOTONES DE ACCIÓN DE LA PANTALLA -->
+        <header class="top-header">
+            <h1>GESTIÓN DE TEÓRICOS DE PRODUCCIÓN</h1>
+            <div class="toolbar">
+                <button class="btn-tool btn-nuevo" onclick="abrirFormulario()">Agregar</button>
+                <button class="btn-tool btn-cerrar-pantalla" onclick="window.location.href='/'">Cerrar</button>
+            </div>
+            
+            <div class="filtros-bar">
+                <label for="input-buscar">Filtro:</label>
+                <input type="text" id="input-buscar" placeholder="Buscar por código, descripción o centro..." onkeyup="filtrarTabla()">
+            </div>
+        </header>
+
+        <!-- TABLA DE DATOS -->
+        <main class="tabla-container">
+            <table class="tabla-teoricos" id="tabla-teoricos">
+                <thead>
+                    <tr>
+                        <th>id</th>
+                        <th>planta</th>
+                        <th>estado</th>
+                        <th>codigo</th>
+                        <th>descripcion</th>
+                        <th>bultos_hora</th>
+                        <th>dotacion</th>
+                        <th>centro_trabajo</th>
+                        <th>uxb</th>
+                        <th>peso</th>
+                        <th>kg_teoricos</th>
+                        <th>flex_unid_kg</th>
+                        <th>acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-teoricos">
+                    <!-- Se llena con JS mediante la API -->
+                </tbody>
+            </table>
+        </main>
+
+    </div>
+
+    <!-- FORMULARIO / MODAL (AGREGAR / MODIFICAR) -->
+    <div id="modal-teorico" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-titulo">Nuevo Teórico</h3>
+                <span class="btn-cerrar" onclick="cerrarFormulario()">&times;</span>
+            </div>
+            
+            <form id="form-teorico" onsubmit="guardarTeorico(event)">
+                <input type="hidden" id="teorico-id" name="id">
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Planta / Sector</label>
+                        <select id="planta" required>
+                            <option value="chocolate">Chocolate</option>
+                            <option value="golosinas">Golosinas</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <input type="text" id="estado" placeholder="Ej: SE, PT" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Código Producto</label>
+                        <input type="text" id="codigo" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Descripción de Producto</label>
+                        <input type="text" id="descripcion" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Bultos / Hora</label>
+                        <input type="number" step="0.0001" id="bultos_hora" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Dotación</label>
+                        <input type="number" step="0.5" id="dotacion" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Centro de Trabajo</label>
+                        <input type="text" id="centro_trabajo" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>UXB</label>
+                        <input type="number" step="0.01" id="uxb">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Peso</label>
+                        <input type="number" step="0.0001" id="peso">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Kg Teóricos</label>
+                        <input type="number" step="0.0001" id="kg_teoricos">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Flex Unid (kg)</label>
+                        <input type="number" step="0.000001" id="flex_unid_kg">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancelar" onclick="cerrarFormulario()">Cancelar</button>
+                    <button type="submit" class="btn-guardar">Guardar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/teoricos.js"></script>
+</body>
+</html>
