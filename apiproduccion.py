@@ -35,9 +35,10 @@ def home(request: Request):
 @app.get("/teoricos", response_class=HTMLResponse)
 def vista_teoricos(request: Request):
     """Carga la pantalla independiente de Teóricos."""
-    if os.path.exists(os.path.join(BASE_DIR, "teoricos.html")):
-        return templates.TemplateResponse(request, "teoricos.html", {})
-    return FileResponse(os.path.join(BASE_DIR, "teoricos.html"))
+    ruta_html = os.path.join(BASE_DIR, "teoricos.html")
+    if os.path.exists(ruta_html):
+        return templates.TemplateResponse("teoricos.html", {"request": request})
+    raise HTTPException(status_code=404, detail="El archivo teoricos.html no existe")
 
 
 # ==========================================
