@@ -42,65 +42,78 @@ def home(request: Request):
 # 2. MÓDULO: TEÓRICOS (ENDPOINTS DE API)
 # ==========================================
 
-@app.get("/api/teoricos/datos")
 @app.get("/api/teoricos")
-def api_obtener_teoricos():
-    """Retorna la lista completa de teóricos desde el modelo."""
+def obtener_teoricos():
+    """Obtiene la lista de teóricos."""
     try:
         datos = TeoricosModelo.obtener_todos()
         return {"status": "ok", "datos": datos}
     except Exception as e:
-        print(f"Error en /api/teoricos: {e}")
+        print(f"[ERROR GET] /api/teoricos: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/teoricos/obtener/{id_teorico}")
 @app.get("/api/teoricos/{id_teorico}")
-def api_obtener_teorico_por_id(id_teorico: int):
-    """Obtiene un registro teórico individual por su ID."""
+def obtener_teorico_por_id(id_teorico: int):
+    """Obtiene un único teórico por su ID."""
     try:
         teorico = TeoricosModelo.obtener_por_id(id_teorico)
         if not teorico:
-            return {"status": "error", "mensaje": "Teórico no encontrado"}
-        return {"status": "ok", "data": teorico}
+            raise HTTPException(status_code=404, detail="Teórico no encontrado")
+        return {"status": "ok", "datos": teorico}
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error obteniendo teórico {id_teorico}: {e}")
+        print(f"[ERROR GET] /api/teoricos/{id_teorico}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/teoricos/guardar")
+# ==========================================
+# 2. POST - Crear un nuevo recurso
+# ==========================================
 @app.post("/api/teoricos")
-def api_guardar_teorico(payload: dict = Body(...)):
-    """Crea un nuevo registro o actualiza uno existente según contenga 'id'."""
-    id_reg = payload.get("id") or payload.get("datos", {}).get("id")
-    datos = payload.get("datos", payload)
-
+def crear_teorico(datos: dict = Body(...)):
+    """Crea un nuevo registro teórico."""
     try:
-        if id_reg:
-            exito = TeoricosModelo.actualizar(int(id_reg), datos)
-            msg_error = "No se pudo actualizar el teórico en la base de datos."
-        else:
-            exito = TeoricosModelo.insertar(datos)
-            msg_error = "No se pudo insertar el teórico en la base de datos."
-
+        exito = TeoricosModelo.insertar(datos)
         if exito:
-            return {"status": "ok", "message": "Registro guardado correctamente."}
-        return {"status": "error", "message": msg_error}
+            return {"status": "ok", "message": "Teórico creado correctamente."}
+        raise HTTPException(status_code=400, detail="No se pudo crear el registro.")
     except Exception as e:
-        print(f"Error en guardar teórico: {e}")
-        return {"status": "error", "message": str(e)}
+        print(f"[ERROR POST] /api/teoricos: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==========================================
+# 3. PUT - Actualizar un recurso existente
+# ==========================================
 @app.put("/api/teoricos/{id_teorico}")
-def api_actualizar_teorico_put(id_teorico: int, payload: dict = Body(...)):
-    """Endpoint PUT tradicional para actualizar teóricos."""
+def actualizar_teorico(id_teorico: int, datos: dict = Body(...)):
+    """Actualiza completamente un teórico por su ID."""
     try:
-        exito = TeoricosModelo.actualizar(id_teorico, payload)
+        exito = TeoricosModelo.actualizar(id_teorico, datos)
         if exito:
             return {"status": "ok", "message": "Teórico actualizado correctamente."}
-        return {"status": "error", "message": "Error al actualizar registro."}
+        raise HTTPException(status_code=400, detail="No se pudo actualizar el registro.")
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        print(f"[ERROR PUT] /api/teoricos/{id_teorico}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==========================================
+# 4. DELETE - Eliminar un recurso
+# ==========================================
+@app.delete("/api/teoricos/{id_teorico}")
+def eliminar_teorico(id_teorico: int):
+    """Elimina un teórico por su ID."""
+    try:
+        exito = TeoricosModelo.eliminar(id_teorico)
+        if exito:
+            return {"status": "ok", "message": "Teórico eliminado correctamente."}
+        raise HTTPException(status_code=400, detail="No se pudo eliminar el registro.")
+    except Exception as e:
+        print(f"[ERROR DELETE] /api/teoricos/{id_teorico}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/sectores/{sector}")
