@@ -32,10 +32,10 @@ def home(request: Request):
 
 
 
-@app.get("/teoricos", response_class=HTMLResponse)
-def vista_teoricos(request: Request):
-    """Carga la pantalla independiente de Teóricos."""
-    return templates.TemplateResponse("teoricos.html", {"request": request})
+@app.get("/Teoricos", response_class=HTMLResponse)
+def home(request: Request):
+    """Carga la pantalla principal de la aplicación."""
+    return templates.TemplateResponse(request, "teoricos.html", {})
 
 
 # ==========================================
