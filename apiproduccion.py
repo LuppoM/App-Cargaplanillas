@@ -11,7 +11,8 @@ from fastapi.templating import Jinja2Templates
 import conexion
 from teoricosmodelo import TeoricosModelo
 
-app = FastAPI(title="API PRODUCCIÓN - PLANILLAS Y TEÓRICOS")
+# En apiproduccion.py
+app = FastAPI(title="API PRODUCCIÓN")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=BASE_DIR)
