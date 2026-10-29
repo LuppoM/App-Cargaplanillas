@@ -1,11 +1,12 @@
 from conexion import obtener_conexion
 from typing import List, Dict, Any, Optional
+from psycopg2.extras import RealDictCursor
 
 class TeoricosModelo:
     
     @staticmethod
     def obtener_todos(limit: int = 500) -> List[Dict[str, Any]]:
-        """Obtiene el listado de teóricos sin Eficiencia STD."""
+        """Obtiene el listado de teóricos mapeados como diccionario."""
         sql = """
             SELECT id, planta, estado, codigo, descripcion, bultos_hora, 
                    dotacion, centro_trabajo, uxb, peso, kg_teoricos, flex_unid_kg
@@ -15,21 +16,19 @@ class TeoricosModelo:
         """
         try:
             with obtener_conexion() as conn:
-                with conn.cursor() as cursor:
+                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                     cursor.execute(sql, (limit,))
-                    registros = cursor.fetchall()
-                    return registros
+                    return cursor.fetchall()
         except Exception as e:
             print(f"[ERROR MODELO] Fallo al consultar teóricos: {e}")
             return []
 
     @staticmethod
     def obtener_por_id(id_teorico: int) -> Optional[Dict[str, Any]]:
-        """Obtiene un único registro por su ID."""
         sql = "SELECT id, planta, estado, codigo, descripcion, bultos_hora, dotacion, centro_trabajo, uxb, peso, kg_teoricos, flex_unid_kg FROM teoricos WHERE id = %s;"
         try:
             with obtener_conexion() as conn:
-                with conn.cursor() as cursor:
+                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                     cursor.execute(sql, (id_teorico,))
                     return cursor.fetchone()
         except Exception as e:
@@ -38,7 +37,6 @@ class TeoricosModelo:
 
     @staticmethod
     def insertar(datos: Dict[str, Any]) -> bool:
-        """Inserta un nuevo teórico sin Eficiencia STD."""
         sql = """
             INSERT INTO teoricos (
                 planta, estado, codigo, descripcion, bultos_hora, 
@@ -61,7 +59,6 @@ class TeoricosModelo:
 
     @staticmethod
     def actualizar(id_teorico: int, datos: Dict[str, Any]) -> bool:
-        """Actualiza un teórico existente."""
         sql = """
             UPDATE teoricos SET
                 planta = %(planta)s,
