@@ -3,7 +3,9 @@ from typing import List, Dict, Any, Optional
 from psycopg2.extras import RealDictCursor
 
 class TeoricosModelo:
-    
+    def __init__(self, api_url: str = "http://localhost:8000/api"):
+        """Inicializa la URL base quitando la barra final si la tiene."""
+        self.api_url = api_url.rstrip('/')
     @staticmethod
     def obtener_todos(limit: int = 500) -> List[Dict[str, Any]]:
         """Obtiene el listado de teóricos mapeados como diccionario."""
