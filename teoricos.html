@@ -81,8 +81,8 @@
 
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Planta / Sector</label>
-                        <select id="planta" required>
+                        <label for="planta">Planta / Sector</label>
+                        <select id="planta" name="planta" onchange="actualizarComboSectoresPorPlanta()">
                             <option value="chocolate">Chocolate</option>
                             <option value="golosinas">Golosinas</option>
                         </select>
@@ -116,7 +116,7 @@
                     <div class="form-group">
                         <label for="centro_trabajo">Centro de Trabajo</label>
                         <select id="centro_trabajo" name="centro_trabajo">
-                        <option value="">Seleccione un sector...</option>
+                            <option value="">Seleccione un sector...</option>
                         </select>
                     </div>
 
@@ -152,18 +152,26 @@
     let objetoSeleccionado = null;
     let datosGlobales = [];
     let datosFiltrados = [];
+    let listaSectoresGlobal = []; // Guarda todos los sectores traídos de la API
     let paginaActual = 1;
     const registrosPorPagina = 50;
     let temporizadorFiltro = null;
 
     document.addEventListener('DOMContentLoaded', () => {
-    cargarTeoricos();
-    cargarSectoresEnCombo(); // Carga las opciones del combo al iniciar
+        cargarTeoricos();
+        cargarSectoresIniciales(); // Carga la lista global de sectores
 
-    document.getElementById('bultos_hora').addEventListener('input', calcularKgTeoricos);
-    document.getElementById('uxb').addEventListener('input', calcularKgTeoricos);
-    document.getElementById('peso').addEventListener('input', calcularKgTeoricos);
-});
+        // Escucha el cambio de planta en el formulario para filtrar sectores
+        const selectPlanta = document.getElementById('planta');
+        if (selectPlanta) {
+            selectPlanta.addEventListener('change', () => actualizarComboSectoresPorPlanta());
+        }
+
+        // Listeners para el cálculo automático de Kg Teóricos
+        document.getElementById('bultos_hora').addEventListener('input', calcularKgTeoricos);
+        document.getElementById('uxb').addEventListener('input', calcularKgTeoricos);
+        document.getElementById('peso').addEventListener('input', calcularKgTeoricos);
+    });
 
     function calcularKgTeoricos() {
         const bultosHora = parseFloat(document.getElementById('bultos_hora').value) || 0;
@@ -171,6 +179,45 @@
         const peso = parseFloat(document.getElementById('peso').value) || 0;
         const resultado = uxb * peso * bultosHora;
         document.getElementById('kg_teoricos').value = resultado ? resultado.toFixed(4) : 0;
+    }
+
+    // Trae todos los sectores de la API una sola vez
+    async function cargarSectoresIniciales() {
+        try {
+            const res = await fetch('/api/sectores');
+            const resJson = await res.json();
+            listaSectoresGlobal = resJson.datos || [];
+            actualizarComboSectoresPorPlanta();
+        } catch (e) {
+            console.error("Error al cargar la lista de sectores:", e);
+        }
+    }
+
+    // Filtra los sectores según la planta elegida en el select del modal
+    function actualizarComboSectoresPorPlanta(valorSeleccionado = '') {
+        const selectPlanta = document.getElementById('planta');
+        const plantaSeleccionada = selectPlanta ? selectPlanta.value.toLowerCase().trim() : 'chocolate';
+        const selectCentro = document.getElementById('centro_trabajo');
+        
+        if (!selectCentro) return;
+
+        selectCentro.innerHTML = '<option value="">Seleccione un sector...</option>';
+
+        // Filtra los sectores que pertenecen a la planta activa
+        const sectoresFiltrados = listaSectoresGlobal.filter(sec => 
+            String(sec.planta).toLowerCase().trim() === plantaSeleccionada && (sec.activo || sec.nombre === valorSeleccionado)
+        );
+
+        sectoresFiltrados.forEach(sec => {
+            const option = document.createElement('option');
+            option.value = sec.nombre;
+            option.textContent = sec.nombre;
+            selectCentro.appendChild(option);
+        });
+
+        if (valorSeleccionado) {
+            selectCentro.value = valorSeleccionado;
+        }
     }
 
     async function cargarTeoricos() {
@@ -284,13 +331,14 @@
     function filtrarColumnas() { aplicarFiltros(); }
 
     function abrirFormulario() {
-    document.getElementById('form-teorico').reset();
-    document.getElementById('teorico-id').value = '';
-    document.getElementById('kg_teoricos').value = '';
-    document.getElementById('centro_trabajo').value = ''; // Reset combo
-    document.getElementById('modal-titulo').innerText = 'Nuevo Teórico';
-    document.getElementById('modal-teorico').style.display = 'flex';
-}
+        document.getElementById('form-teorico').reset();
+        document.getElementById('teorico-id').value = '';
+        document.getElementById('kg_teoricos').value = '';
+        document.getElementById('planta').value = 'chocolate';
+        actualizarComboSectoresPorPlanta(); // Reinicia los sectores para 'chocolate'
+        document.getElementById('modal-titulo').innerText = 'Nuevo Teórico';
+        document.getElementById('modal-teorico').style.display = 'flex';
+    }
 
     function cerrarFormulario() {
         document.getElementById('modal-teorico').style.display = 'none';
@@ -305,26 +353,29 @@
     }
 
     function editarTeorico(item) {
-    document.getElementById('teorico-id').value = item.id;
-    document.getElementById('planta').value = item.planta || 'chocolate';
-    document.getElementById('estado').value = item.estado || '';
-    document.getElementById('codigo').value = item.codigo || '';
-    document.getElementById('descripcion').value = item.descripcion || '';
-    document.getElementById('bultos_hora').value = item.bultos_hora || 0;
-    document.getElementById('dotacion').value = item.dotacion || 0;
-    
-    // Asigna el valor del sector a editar cargando/seleccionando en el combo
-    cargarSectoresEnCombo(item.centro_trabajo || '');
+        document.getElementById('teorico-id').value = item.id;
+        
+        const plantaValor = (item.planta || 'chocolate').toLowerCase();
+        document.getElementById('planta').value = plantaValor;
+        
+        document.getElementById('estado').value = item.estado || '';
+        document.getElementById('codigo').value = item.codigo || '';
+        document.getElementById('descripcion').value = item.descripcion || '';
+        document.getElementById('bultos_hora').value = item.bultos_hora || 0;
+        document.getElementById('dotacion').value = item.dotacion || 0;
 
-    document.getElementById('uxb').value = item.uxb || 0;
-    document.getElementById('peso').value = item.peso || 0;
-    document.getElementById('flex_unid_kg').value = item.flex_unid_kg || 0;
+        // Actualiza las opciones del combo según la planta del registro y selecciona su sector
+        actualizarComboSectoresPorPlanta(item.centro_trabajo || '');
 
-    calcularKgTeoricos();
+        document.getElementById('uxb').value = item.uxb || 0;
+        document.getElementById('peso').value = item.peso || 0;
+        document.getElementById('flex_unid_kg').value = item.flex_unid_kg || 0;
 
-    document.getElementById('modal-titulo').innerText = 'Editar Teórico';
-    document.getElementById('modal-teorico').style.display = 'flex';
-}
+        calcularKgTeoricos();
+
+        document.getElementById('modal-titulo').innerText = 'Editar Teórico';
+        document.getElementById('modal-teorico').style.display = 'flex';
+    }
 
     async function guardarTeorico(e) {
         e.preventDefault();
@@ -361,34 +412,6 @@
             alert("Error al guardar registro.");
         }
     }
-// Función para poblar el combobox con los nombres de la tabla sectores
-async function cargarSectoresEnCombo(valorSeleccionado = '') {
-    try {
-        const res = await fetch('/api/sectores');
-        const resJson = await res.json();
-        const sectores = resJson.datos || [];
-        
-        const select = document.getElementById('centro_trabajo');
-        select.innerHTML = '<option value="">Seleccione un sector...</option>';
-
-        sectores.forEach(sec => {
-            // Solo cargamos sectores activos (o el que ya esté asignado en edición aunque esté inactivo)
-            if (sec.activo || sec.nombre === valorSeleccionado) {
-                const option = document.createElement('option');
-                option.value = sec.nombre;
-                option.textContent = sec.nombre;
-                select.appendChild(option);
-            }
-        });
-
-        // Asigna el valor del teórico al modificar
-        if (valorSeleccionado) {
-            select.value = valorSeleccionado;
-        }
-    } catch (e) {
-        console.error("Error al cargar combo de sectores:", e);
-    }
-}
 </script>
   
 
