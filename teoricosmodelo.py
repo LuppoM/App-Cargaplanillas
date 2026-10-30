@@ -86,3 +86,21 @@ class TeoricosModelo:
         except Exception as e:
             print(f"[ERROR MODELO] Fallo al actualizar teórico ID {id_teorico}: {e}")
             return False
+    @staticmethod
+    def obtener_para_combo() -> List[Dict[str, Any]]:
+        """Obtiene los sectores activos ordenados por nombre para llenar comboboxes."""
+        sql = """
+            SELECT id, nombre, planta 
+            FROM sectores 
+            WHERE activo = TRUE 
+            ORDER BY nombre ASC;
+        """
+        try:
+            with obtener_conexion() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                    cursor.execute(sql)
+                    registros = cursor.fetchall()
+                    return [dict(row) for row in registros]
+        except Exception as e:
+            print(f"[ERROR MODELO SECTORES] Fallo al consultar sectores para combo: {e}")
+            return []
