@@ -199,3 +199,42 @@ body {
     border-radius: 4px;
     cursor: pointer;
 }
+/* REGULACIÓN DE STICKY HEADER Y FILTROS POR COLUMNA */
+.tabla-teoricos thead tr.fila-filtros th {
+    background-color: #dce6f1;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 4px;
+}
+
+.tabla-teoricos thead tr.titulos-cabecera th {
+    position: sticky;
+    top: 31px;
+    z-index: 9;
+}
+
+.input-filtro-col {
+    width: 100%;
+    padding: 3px 5px;
+    font-size: 11px;
+    border: 1px solid #a6b9d8;
+    border-radius: 3px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.input-filtro-col:focus {
+    border-color: #0d233a;
+    background-color: #ffffff;
+}
+
+/* SELECCIÓN DE FILA */
+#tbody-teoricos tr {
+    cursor: pointer;
+}
+
+#tbody-teoricos tr.fila-seleccionada {
+    background-color: #b4c6e7 !important;
+    font-weight: bold;
+}

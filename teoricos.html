@@ -16,12 +16,13 @@
             
             <div class="toolbar">
                 <button class="btn-tool" onclick="abrirFormulario()">+ Nuevo Teórico</button>
+                <button class="btn-tool" onclick="editarSeleccionado()">Modificar</button>
                 <a href="/" class="btn-tool btn-cerrar-pantalla" style="text-decoration: none; display: inline-block;">Volver</a>
             </div>
             
             <div class="filtros-bar">
-                <label for="input-buscar">Buscar:</label>
-                <input type="text" id="input-buscar" placeholder="Buscar por código, descripción, centro..." onkeyup="filtrarTabla()">
+                <label for="input-buscar">Buscar General:</label>
+                <input type="text" id="input-buscar" placeholder="Buscar en toda la tabla..." onkeyup="filtrarTablaGeneral()">
             </div>
         </header>
 
@@ -29,7 +30,23 @@
         <main class="tabla-container">
             <table class="tabla-teoricos">
                 <thead>
-                    <tr>
+                    <!-- FILA DE FILTROS POR COLUMNA -->
+                    <tr class="fila-filtros">
+                        <th><input type="text" class="input-filtro-col" placeholder="id" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="planta" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="estado" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="codigo" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="descripcion" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="bultos_hora" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="dotacion" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="centro_trabajo" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="uxb" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="peso" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="kg_teoricos" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="flex_unid_kg" onkeyup="filtrarColumnas()"></th>
+                    </tr>
+                    <!-- TITULOS DE COLUMNAS -->
+                    <tr class="titulos-cabecera">
                         <th>id</th>
                         <th>planta</th>
                         <th>estado</th>
@@ -42,7 +59,6 @@
                         <th>peso</th>
                         <th>kg_teoricos</th>
                         <th>flex_unid_kg</th>
-                        <th>acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-teoricos">
@@ -132,6 +148,8 @@
     </div>
 
     <script>
+        let objetoSeleccionado = null;
+
         document.addEventListener('DOMContentLoaded', cargarTeoricos);
 
         async function cargarTeoricos() {
@@ -141,25 +159,30 @@
                 const datos = resJson.datos || [];
                 const tbody = document.getElementById('tbody-teoricos');
                 tbody.innerHTML = '';
+                objetoSeleccionado = null;
 
                 datos.forEach(item => {
                     const tr = document.createElement('tr');
+                    
+                    tr.onclick = function() {
+                        document.querySelectorAll('#tbody-teoricos tr').forEach(r => r.classList.remove('fila-seleccionada'));
+                        tr.classList.add('fila-seleccionada');
+                        objetoSeleccionado = item;
+                    };
+
                     tr.innerHTML = `
-                        <td>${item.id || ''}</td>
-                        <td>${item.planta || ''}</td>
-                        <td>${item.estado || ''}</td>
-                        <td><strong>${item.codigo || ''}</strong></td>
-                        <td>${item.descripcion || ''}</td>
-                        <td>${item.bultos_hora || 0}</td>
-                        <td>${item.dotacion || 0}</td>
-                        <td>${item.centro_trabajo || ''}</td>
-                        <td>${item.uxb || 0}</td>
-                        <td>${item.peso || 0}</td>
-                        <td>${item.kg_teoricos || 0}</td>
-                        <td>${item.flex_unid_kg || 0}</td>
-                        <td>
-                            <button class="btn-tool" onclick='editarTeorico(${JSON.stringify(item)})'>Editar</button>
-                        </td>
+                        <td>${item.id ?? ''}</td>
+                        <td>${item.planta ?? ''}</td>
+                        <td>${item.estado ?? ''}</td>
+                        <td><strong>${item.codigo ?? ''}</strong></td>
+                        <td>${item.descripcion ?? ''}</td>
+                        <td>${item.bultos_hora ?? 0}</td>
+                        <td>${item.dotacion ?? 0}</td>
+                        <td>${item.centro_trabajo ?? ''}</td>
+                        <td>${item.uxb ?? 0}</td>
+                        <td>${item.peso ?? 0}</td>
+                        <td>${item.kg_teoricos ?? 0}</td>
+                        <td>${item.flex_unid_kg ?? 0}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -179,12 +202,12 @@
             document.getElementById('modal-teorico').style.display = 'none';
         }
 
-        function filtrarTabla() {
-            const filtro = document.getElementById('input-buscar').value.toLowerCase();
-            const filas = document.querySelectorAll('#tbody-teoricos tr');
-            filas.forEach(f => {
-                f.style.display = f.innerText.toLowerCase().includes(filtro) ? '' : 'none';
-            });
+        function editarSeleccionado() {
+            if (!objetoSeleccionado) {
+                alert("Seleccioná una fila de la tabla haciéndole clic para modificarla.");
+                return;
+            }
+            editarTeorico(objetoSeleccionado);
         }
 
         function editarTeorico(item) {
@@ -203,6 +226,36 @@
 
             document.getElementById('modal-titulo').innerText = 'Editar Teórico';
             document.getElementById('modal-teorico').style.display = 'flex';
+        }
+
+        function filtrarTablaGeneral() {
+            const filtro = document.getElementById('input-buscar').value.toLowerCase();
+            const filas = document.querySelectorAll('#tbody-teoricos tr');
+            filas.forEach(f => {
+                f.style.display = f.innerText.toLowerCase().includes(filtro) ? '' : 'none';
+            });
+        }
+
+        function filtrarColumnas() {
+            const inputs = document.querySelectorAll('.input-filtro-col');
+            const filas = document.querySelectorAll('#tbody-teoricos tr');
+
+            filas.forEach(fila => {
+                let mostrar = true;
+                const celdas = fila.querySelectorAll('td');
+
+                inputs.forEach((input, index) => {
+                    const textoFiltro = input.value.toLowerCase().trim();
+                    if (textoFiltro !== '' && celdas[index]) {
+                        const textoCelda = celdas[index].innerText.toLowerCase();
+                        if (!textoCelda.includes(textoFiltro)) {
+                            mostrar = false;
+                        }
+                    }
+                });
+
+                fila.style.display = mostrar ? '' : 'none';
+            });
         }
 
         async function guardarTeorico(e) {
