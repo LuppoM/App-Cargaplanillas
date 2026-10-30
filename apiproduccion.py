@@ -37,6 +37,11 @@ def home(request: Request):
     """Carga la pantalla principal de la aplicación."""
     return templates.TemplateResponse(request, "teoricos.html", {})
 
+@app.get("/sectores", response_class=HTMLResponse)
+def home(request: Request):
+    """Carga la pantalla principal de la aplicación."""
+    return templates.TemplateResponse(request, "sectores.html", {})
+
 
 # ==========================================
 # 2. MÓDULO: TEÓRICOS (ENDPOINTS DE API)
@@ -116,20 +121,7 @@ def eliminar_teorico(id_teorico: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/sectores/{sector}")
-def api_obtener_datos_sector(sector: str):
-    """Consulta teóricos filtrados por planta/sector."""
-    try:
-        conn = conexion.obtener_conexion()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM teoricos WHERE LOWER(planta) = LOWER(%s) LIMIT 100;", (sector,))
-        datos = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return {"status": "ok", "datos": datos}
-    except Exception as e:
-        print(f"Error obteniendo sector {sector}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+
 # ==========================================
 # 3. MÓDULO: SECTORES (ENDPOINTS DE API)
 # ==========================================
