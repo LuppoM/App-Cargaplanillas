@@ -7,20 +7,20 @@ class TeoricosModelo:
         """Inicializa la URL base quitando la barra final si la tiene."""
         self.api_url = api_url.rstrip('/')
     @staticmethod
-    def obtener_todos(limit: int = 500) -> List[Dict[str, Any]]:
-        """Obtiene el listado de teóricos mapeados como diccionario."""
+    def obtener_todos() -> List[Dict[str, Any]]:
+        """Obtiene el listado completo de teóricos sin límite."""
         sql = """
             SELECT id, planta, estado, codigo, descripcion, bultos_hora, 
-                   dotacion, centro_trabajo, uxb, peso, kg_teoricos, flex_unid_kg
+                dotacion, centro_trabajo, uxb, peso, kg_teoricos, flex_unid_kg
             FROM teoricos
-            ORDER BY id DESC
-            LIMIT %s;
+            ORDER BY id DESC;
         """
         try:
             with obtener_conexion() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                    cursor.execute(sql, (limit,))
-                    return cursor.fetchall()
+                    cursor.execute(sql)
+                    registros = cursor.fetchall()
+                    return [dict(row) for row in registros]
         except Exception as e:
             print(f"[ERROR MODELO] Fallo al consultar teóricos: {e}")
             return []
