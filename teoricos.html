@@ -147,42 +147,53 @@
         </div>
     </div>
 <script>
-      <!-- SCRIPT DE LÓGICA DE VISTA -->
     let objetoSeleccionado = null;
-let temporizadorFiltro = null;
+    let datosGlobales = [];
+    let datosFiltrados = [];
+    let paginaActual = 1;
+    const registrosPorPagina = 50;
+    let temporizadorFiltro = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-    cargarTeoricos();
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarTeoricos();
 
-    // Event listeners para recalcular Kg Teóricos dinámicamente al tipear
-    document.getElementById('bultos_hora').addEventListener('input', calcularKgTeoricos);
-    document.getElementById('uxb').addEventListener('input', calcularKgTeoricos);
-    document.getElementById('peso').addEventListener('input', calcularKgTeoricos);
-});
+        document.getElementById('bultos_hora').addEventListener('input', calcularKgTeoricos);
+        document.getElementById('uxb').addEventListener('input', calcularKgTeoricos);
+        document.getElementById('peso').addEventListener('input', calcularKgTeoricos);
+    });
 
-// Función para calcular automáticamente Kg Teóricos (UXB * Peso * Bultos/Hora)
-function calcularKgTeoricos() {
-    const bultosHora = parseFloat(document.getElementById('bultos_hora').value) || 0;
-    const uxb = parseFloat(document.getElementById('uxb').value) || 0;
-    const peso = parseFloat(document.getElementById('peso').value) || 0;
+    function calcularKgTeoricos() {
+        const bultosHora = parseFloat(document.getElementById('bultos_hora').value) || 0;
+        const uxb = parseFloat(document.getElementById('uxb').value) || 0;
+        const peso = parseFloat(document.getElementById('peso').value) || 0;
+        const resultado = uxb * peso * bultosHora;
+        document.getElementById('kg_teoricos').value = resultado ? resultado.toFixed(4) : 0;
+    }
 
-    const resultado = uxb * peso * bultosHora;
+    async function cargarTeoricos() {
+        try {
+            const res = await fetch('/api/teoricos');
+            const resJson = await res.json();
+            datosGlobales = resJson.datos || [];
+            datosFiltrados = [...datosGlobales];
+            paginaActual = 1;
+            renderizarTabla();
+        } catch (e) {
+            console.error("Error al cargar teóricos:", e);
+        }
+    }
 
-    document.getElementById('kg_teoricos').value = resultado ? resultado.toFixed(4) : 0;
-}
-
-async function cargarTeoricos() {
-    try {
-        const res = await fetch('/api/teoricos');
-        const resJson = await res.json();
-        const datos = resJson.datos || [];
+    function renderizarTabla() {
         const tbody = document.getElementById('tbody-teoricos');
         tbody.innerHTML = '';
         objetoSeleccionado = null;
 
-        datos.forEach(item => {
+        const inicio = (paginaActual - 1) * registrosPorPagina;
+        const fin = inicio + registrosPorPagina;
+        const paginaDatos = datosFiltrados.slice(inicio, fin);
+
+        paginaDatos.forEach(item => {
             const tr = document.createElement('tr');
-            
             tr.onclick = function() {
                 document.querySelectorAll('#tbody-teoricos tr').forEach(r => r.classList.remove('fila-seleccionada'));
                 tr.classList.add('fila-seleccionada');
@@ -205,184 +216,144 @@ async function cargarTeoricos() {
             `;
             tbody.appendChild(tr);
         });
-    } catch (e) {
-        console.error("Error al cargar teóricos:", e);
+
+        actualizarControlesPaginacion();
     }
-}
 
-function abrirFormulario() {
-    document.getElementById('form-teorico').reset();
-    document.getElementById('teorico-id').value = '';
-    document.getElementById('kg_teoricos').value = '';
-    document.getElementById('modal-titulo').innerText = 'Nuevo Teórico';
-    document.getElementById('modal-teorico').style.display = 'flex';
-}
-
-function cerrarFormulario() {
-    document.getElementById('modal-teorico').style.display = 'none';
-}
-
-function editarSeleccionado() {
-    if (!objetoSeleccionado) {
-        alert("Seleccioná una fila de la tabla haciéndole clic para modificarla.");
-        return;
-    }
-    editarTeorico(objetoSeleccionado);
-}
-
-function editarTeorico(item) {
-    document.getElementById('teorico-id').value = item.id;
-    document.getElementById('planta').value = item.planta || 'chocolate';
-    document.getElementById('estado').value = item.estado || '';
-    document.getElementById('codigo').value = item.codigo || '';
-    document.getElementById('descripcion').value = item.descripcion || '';
-    document.getElementById('bultos_hora').value = item.bultos_hora || 0;
-    document.getElementById('dotacion').value = item.dotacion || 0;
-    document.getElementById('centro_trabajo').value = item.centro_trabajo || '';
-    document.getElementById('uxb').value = item.uxb || 0;
-    document.getElementById('peso').value = item.peso || 0;
-    document.getElementById('flex_unid_kg').value = item.flex_unid_kg || 0;
-
-    calcularKgTeoricos();
-
-    document.getElementById('modal-titulo').innerText = 'Editar Teórico';
-    document.getElementById('modal-teorico').style.display = 'flex';
-}
-
-// FUNCIONES DE CARGA Y FILTRADO CON FEEDBACK VISUAL
-
-function mostrarIndicadorCarga() {
-    let loader = document.getElementById('loader-filtro');
-    if (!loader) {
-        loader = document.createElement('div');
-        loader.id = 'loader-filtro';
-        loader.innerText = 'Filtrando registros...';
-        loader.style.cssText = `
-            position: fixed;
-            top: 15px;
-            right: 20px;
-            background: #0d233a;
-            color: #fff;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 9999;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        `;
-        document.body.appendChild(loader);
-    }
-    loader.style.display = 'block';
-}
-
-function ocultarIndicadorCarga() {
-    const loader = document.getElementById('loader-filtro');
-    if (loader) loader.style.display = 'none';
-}
-
-function ejecutarFiltradoAsincrono(tareaFiltrado) {
-    clearTimeout(temporizadorFiltro);
-    
-    // Espera a que el usuario deje de tipear 350ms
-    temporizadorFiltro = setTimeout(() => {
-        mostrarIndicadorCarga();
-        
-        // Permite que el navegador pinte el indicador de carga antes de ejecutar el bucle pesado
-        requestAnimationFrame(() => {
-            setTimeout(() => {
-                tareaFiltrado();
-                ocultarIndicadorCarga();
-            }, 20);
-        });
-    }, 350);
-}
-
-function filtrarTablaGeneral() {
-    ejecutarFiltradoAsincrono(() => {
-        const filtro = document.getElementById('input-buscar').value.toLowerCase().trim();
-        const filas = document.querySelectorAll('#tbody-teoricos tr');
-        
-        filas.forEach(fila => {
-            if (!filtro) {
-                fila.style.display = '';
-                return;
-            }
-            fila.style.display = fila.innerText.toLowerCase().includes(filtro) ? '' : 'none';
-        });
-    });
-}
-
-function filtrarColumnas() {
-    ejecutarFiltradoAsincrono(() => {
-        const inputs = Array.from(document.querySelectorAll('.input-filtro-col'));
-        
-        const filtrosActivos = inputs
-            .map((input, index) => ({ index, valor: input.value.toLowerCase().trim() }))
-            .filter(f => f.valor !== '');
-
-        const filas = document.querySelectorAll('#tbody-teoricos tr');
-
-        if (filtrosActivos.length === 0) {
-            filas.forEach(f => f.style.display = '');
-            return;
+    function actualizarControlesPaginacion() {
+        let contenedor = document.getElementById('paginacion-container');
+        if (!contenedor) {
+            contenedor = document.createElement('div');
+            contenedor.id = 'paginacion-container';
+            contenedor.style.cssText = 'padding: 10px; display: flex; gap: 10px; align-items: center; justify-content: flex-end; font-size: 13px; font-weight: bold;';
+            document.querySelector('.tabla-container').after(contenedor);
         }
 
-        filas.forEach(fila => {
-            const celdas = fila.children;
-            let coincide = true;
-
-            for (let i = 0; i < filtrosActivos.length; i++) {
-                const { index, valor } = filtrosActivos[i];
-                if (celdas[index]) {
-                    const textoCelda = celdas[index].innerText.toLowerCase();
-                    if (!textoCelda.includes(valor)) {
-                        coincide = false;
-                        break;
-                    }
-                }
-            }
-
-            fila.style.display = coincide ? '' : 'none';
-        });
-    });
-}
-
-async function guardarTeorico(e) {
-    e.preventDefault();
-
-    calcularKgTeoricos();
-
-    const id = document.getElementById('teorico-id').value;
-    const payload = {
-        planta: document.getElementById('planta').value,
-        estado: document.getElementById('estado').value,
-        codigo: document.getElementById('codigo').value,
-        descripcion: document.getElementById('descripcion').value,
-        bultos_hora: parseFloat(document.getElementById('bultos_hora').value) || 0,
-        dotacion: parseFloat(document.getElementById('dotacion').value) || 0,
-        centro_trabajo: document.getElementById('centro_trabajo').value,
-        uxb: parseFloat(document.getElementById('uxb').value) || 0,
-        peso: parseFloat(document.getElementById('peso').value) || 0,
-        kg_teoricos: parseFloat(document.getElementById('kg_teoricos').value) || 0,
-        flex_unid_kg: parseFloat(document.getElementById('flex_unid_kg').value) || 0
-    };
-
-    const url = id ? `/api/teoricos/${id}` : '/api/teoricos';
-    const method = id ? 'PUT' : 'POST';
-
-    const res = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    if (res.ok) {
-        cerrarFormulario();
-        cargarTeoricos();
-    } else {
-        alert("Error al guardar registro.");
+        const totalPaginas = Math.ceil(datosFiltrados.length / registrosPorPagina) || 1;
+        contenedor.innerHTML = `
+            <span>Mostrando ${datosFiltrados.length} registros (Página ${paginaActual} de ${totalPaginas})</span>
+            <button class="btn-tool" ${paginaActual === 1 ? 'disabled' : ''} onclick="cambiarPagina(-1)">Anterior</button>
+            <button class="btn-tool" ${paginaActual >= totalPaginas ? 'disabled' : ''} onclick="cambiarPagina(1)">Siguiente</button>
+        `;
     }
-}
+
+    function cambiarPagina(delta) {
+        paginaActual += delta;
+        renderizarTabla();
+    }
+
+    function aplicarFiltros() {
+        clearTimeout(temporizadorFiltro);
+        temporizadorFiltro = setTimeout(() => {
+            const buscarGeneral = document.getElementById('input-buscar').value.toLowerCase().trim();
+            const inputsCols = Array.from(document.querySelectorAll('.input-filtro-col'));
+            
+            const filtrosCols = inputsCols.map((input, idx) => ({
+                idx,
+                val: input.value.toLowerCase().trim()
+            })).filter(f => f.val !== '');
+
+            const llaves = ['id', 'planta', 'estado', 'codigo', 'descripcion', 'bultos_hora', 'dotacion', 'centro_trabajo', 'uxb', 'peso', 'kg_teoricos', 'flex_unid_kg'];
+
+            datosFiltrados = datosGlobales.filter(item => {
+                // Filtro general
+                if (buscarGeneral) {
+                    const textoFila = Object.values(item).join(' ').toLowerCase();
+                    if (!textoFila.includes(buscarGeneral)) return false;
+                }
+
+                // Filtros por columna
+                for (let f of filtrosCols) {
+                    const clave = llaves[f.idx];
+                    const valorCelda = String(item[clave] ?? '').toLowerCase();
+                    if (!valorCelda.includes(f.val)) return false;
+                }
+
+                return true;
+            });
+
+            paginaActual = 1;
+            renderizarTabla();
+        }, 200);
+    }
+
+    function filtrarTablaGeneral() { aplicarFiltros(); }
+    function filtrarColumnas() { aplicarFiltros(); }
+
+    function abrirFormulario() {
+        document.getElementById('form-teorico').reset();
+        document.getElementById('teorico-id').value = '';
+        document.getElementById('kg_teoricos').value = '';
+        document.getElementById('modal-titulo').innerText = 'Nuevo Teórico';
+        document.getElementById('modal-teorico').style.display = 'flex';
+    }
+
+    function cerrarFormulario() {
+        document.getElementById('modal-teorico').style.display = 'none';
+    }
+
+    function editarSeleccionado() {
+        if (!objetoSeleccionado) {
+            alert("Seleccioná una fila de la tabla haciéndole clic para modificarla.");
+            return;
+        }
+        editarTeorico(objetoSeleccionado);
+    }
+
+    function editarTeorico(item) {
+        document.getElementById('teorico-id').value = item.id;
+        document.getElementById('planta').value = item.planta || 'chocolate';
+        document.getElementById('estado').value = item.estado || '';
+        document.getElementById('codigo').value = item.codigo || '';
+        document.getElementById('descripcion').value = item.descripcion || '';
+        document.getElementById('bultos_hora').value = item.bultos_hora || 0;
+        document.getElementById('dotacion').value = item.dotacion || 0;
+        document.getElementById('centro_trabajo').value = item.centro_trabajo || '';
+        document.getElementById('uxb').value = item.uxb || 0;
+        document.getElementById('peso').value = item.peso || 0;
+        document.getElementById('flex_unid_kg').value = item.flex_unid_kg || 0;
+
+        calcularKgTeoricos();
+
+        document.getElementById('modal-titulo').innerText = 'Editar Teórico';
+        document.getElementById('modal-teorico').style.display = 'flex';
+    }
+
+    async function guardarTeorico(e) {
+        e.preventDefault();
+        calcularKgTeoricos();
+
+        const id = document.getElementById('teorico-id').value;
+        const payload = {
+            planta: document.getElementById('planta').value,
+            estado: document.getElementById('estado').value,
+            codigo: document.getElementById('codigo').value,
+            descripcion: document.getElementById('descripcion').value,
+            bultos_hora: parseFloat(document.getElementById('bultos_hora').value) || 0,
+            dotacion: parseFloat(document.getElementById('dotacion').value) || 0,
+            centro_trabajo: document.getElementById('centro_trabajo').value,
+            uxb: parseFloat(document.getElementById('uxb').value) || 0,
+            peso: parseFloat(document.getElementById('peso').value) || 0,
+            kg_teoricos: parseFloat(document.getElementById('kg_teoricos').value) || 0,
+            flex_unid_kg: parseFloat(document.getElementById('flex_unid_kg').value) || 0
+        };
+
+        const url = id ? `/api/teoricos/${id}` : '/api/teoricos';
+        const method = id ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            cerrarFormulario();
+            cargarTeoricos();
+        } else {
+            alert("Error al guardar registro.");
+        }
+    }
 </script>
   
 
