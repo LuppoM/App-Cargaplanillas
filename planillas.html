@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carga de Planillas - Producción</title>
+    <link rel="stylesheet" href="/static/planillasvista.css">
+    <style>
+        /* Estilos para las solapas (Tabs) */
+        .tabs-container {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #ccc;
+        }
+        .tab-button {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            background-color: #e0e0e0;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            transition: background-color 0.2s;
+        }
+        .tab-button.active {
+            background-color: #0056b3;
+            color: white;
+            border-bottom: 2px solid #0056b3;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .seccion-titulo {
+            grid-column: 1 / -1;
+            font-weight: bold;
+            font-size: 15px;
+            margin-top: 10px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 4px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h2>Carga de Planillas Diarias</h2>
+        <button class="btn-tool" onclick="abrirFormulario()">+ Nueva Planilla</button>
+    </div>
+
+    <!-- Navegación por Solapas/Pestañas -->
+    <div class="tabs-container">
+        <button class="tab-button active" onclick="cambiarSolapa('chocolate')">Planta Chocolate</button>
+        <button class="tab-button" onclick="cambiarSolapa('golosinas')">Planta Golosinas</button>
+    </div>
+
+    <!-- Filtros de búsqueda para la tabla -->
+    <div class="filtros-bar">
+        <input type="text" id="input-buscar" placeholder="Buscar por código, sector..." onkeyup="aplicarFiltros()">
+        <input type="date" id="filtro-fecha" onchange="aplicarFiltros()">
+    </div>
+
+    <!-- Tabla General Consolidada -->
+    <div class="tabla-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Planta</th>
+                    <th>Sector</th>
+                    <th>Código</th>
+                    <th>Turno</th>
+                    <th>Hs Trab.</th>
+                    <th>Kg Reales</th>
+                    <th>Dot. Teórica</th>
+                    <th>Dot. Real</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-planillas">
+                <!-- Se puebla dinámicamente -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal Formulario de Carga -->
+    <div id="modal-planilla" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 900px;">
+            <h3 id="modal-titulo">Cargar Planilla de Producción</h3>
+            
+            <form id="form-planilla" onsubmit="guardarPlanilla(event)">
+                <input type="hidden" id="planilla-id">
+                <input type="hidden" id="planta-activa" name="planta" value="chocolate">
+
+                <div class="form-grid">
+                    <div class="seccion-titulo">1. Contexto del Turno</div>
+                    
+                    <div class="form-group">
+                        <label>Fecha</label>
+                        <input type="date" id="fecha" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Turno</label>
+                        <select id="turno" required>
+                            <option value="Mañana">Mañana</option>
+                            <option value="Tarde">Tarde</option>
+                            <option value="Noche">Noche</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Centro de Trabajo</label>
+                        <select id="centro_trabajo" required onchange="filtrarCodigosPorSector()">
+                            <option value="">Seleccione sector...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Código Producto</label>
+                        <select id="codigo" required onchange="obtenerDatosTeoricoAuto()">
+                            <option value="">Seleccione código...</option>
+                        </select>
+                    </div>
+
+                    <div class="seccion-titulo">2. Tiempos y Personas</div>
+                    
+                    <div class="form-group">
+                        <label>Horas Trabajadas</label>
+                        <input type="number" step="0.01" id="horas_trabajadas" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Dotación Teórica (Auto)</label>
+                        <input type="number" step="0.01" id="dotacion_teorica" readonly style="background-color: #f0f0f0;">
+                    </div>
+                    <div class="form-group">
+                        <label>Dotación Real</label>
+                        <input type="number" step="0.01" id="dotacion_real" required>
+                    </div>
+
+                    <div class="seccion-titulo">3. Producción y Mermas</div>
+                    
+                    <div class="form-group">
+                        <label>Kg/Cajas Reales</label>
+                        <input type="number" step="0.01" id="kg_cajas_reales" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Peso Promedio Unid (kg)</label>
+                        <input type="number" step="0.0001" id="peso_promedio_unid_kg" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Decomiso (kg)</label>
+                        <input type="number" step="0.01" id="decomiso_kg" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Reproceso (kg)</label>
+                        <input type="number" step="0.01" id="reproceso_kg" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Scrap Flex (kg)</label>
+                        <input type="number" step="0.01" id="scrap_flex_kg" value="0">
+                    </div>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="cerrarFormulario()">Cancelar</button>
+                    <button type="submit" class="btn-save">Guardar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+    let plantaActual = 'chocolate';
+    let datosGlobales = [];
+    let listaSectoresGlobal = [];
+    let listaTeoricosGlobal = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarBaseDatosAuxiliares();
+        cargarPlanillas();
+    });
+
+    // Cambia la vista entre Chocolate y Golosinas
+    function cambiarSolapa(planta) {
+        plantaActual = planta;
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        
+        // Activa el botón visual correspondiente
+        event.target.classList.add('active');
+        
+        // Filtra la tabla consolidada por la solapa activa
+        renderizarTabla();
+    }
+
+    // Carga de sectores y teóricos para autocompletar combos y dotación
+    async function cargarBaseDatosAuxiliares() {
+        try {
+            const [resSec, resTeor] = await Promise.all([
+                fetch('/api/sectores'),
+                fetch('/api/teoricos')
+            ]);
+            const jsonSec = await resSec.json();
+            const jsonTeor = await resTeor.json();
+
+            listaSectoresGlobal = jsonSec.datos || [];
+            listaTeoricosGlobal = jsonTeor.datos || [];
+        } catch (e) {
+            console.error("Error al cargar datos auxiliares:", e);
+        }
+    }
+
+    // Consulta la lista consolidada de planillas desde PostgreSQL
+    async function cargarPlanillas() {
+        try {
+            const res = await fetch('/api/planillas');
+            const resJson = await res.json();
+            datosGlobales = resJson.datos || [];
+            renderizarTabla();
+        } catch (e) {
+            console.error("Error al cargar planillas:", e);
+        }
+    }
+
+    // Muestra en pantalla solo los registros correspondientes a la solapa activa
+    function renderizarTabla() {
+        const tbody = document.getElementById('tbody-planillas');
+        tbody.innerHTML = '';
+
+        const filtrados = datosGlobales.filter(p => 
+            String(p.planta).toLowerCase().trim() === plantaActual
+        );
+
+        filtrados.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.id}</td>
+                <td>${item.fecha}</td>
+                <td><strong>${item.planta}</strong></td>
+                <td>${item.centro_trabajo}</td>
+                <td>${item.codigo}</td>
+                <td>${item.turno}</td>
+                <td>${item.horas_trabajadas}</td>
+                <td>${item.kg_cajas_reales}</td>
+                <td>${item.dotacion_teorica}</td>
+                <td>${item.dotacion_real}</td>
+                <td>
+                    <button class="btn-sm" onclick="editarPlanilla(${item.id})">Editar</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Dispara la búsqueda automática al seleccionar CÓDIGO para traer la Dotación Teórica
+    function obtenerDatosTeoricoAuto() {
+        const codSeleccionado = document.getElementById('codigo').value;
+        const teoricoEncontrado = listaTeoricosGlobal.find(t => String(t.codigo) === String(codSeleccionado));
+        
+        if (teoricoEncontrado) {
+            // Asigna automáticamente la Dotación Teórica registrada previamente
+            document.getElementById('dotacion_teorica').value = teoricoEncontrado.dotacion || 0;
+        } else {
+            document.getElementById('dotacion_teorica').value = 0;
+        }
+    }
+
+    function abrirFormulario() {
+        document.getElementById('form-planilla').reset();
+        document.getElementById('planta-activa').value = plantaActual;
+        
+        // Poblar sectores filtrados por la planta activa
+        poblarComboSectores();
+        
+        document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
+        document.getElementById('modal-planilla').style.display = 'flex';
+    }
+
+    function poblarComboSectores() {
+        const selectSec = document.getElementById('centro_trabajo');
+        selectSec.innerHTML = '<option value="">Seleccione sector...</option>';
+
+        const sectoresFiltrados = listaSectoresGlobal.filter(s => 
+            String(s.planta).toLowerCase().trim() === plantaActual && s.activo
+        );
+
+        sectoresFiltrados.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.nombre;
+            opt.textContent = s.nombre;
+            selectSec.appendChild(opt);
+        });
+    }
+
+    function filtrarCodigosPorSector() {
+        const sectorElegido = document.getElementById('centro_trabajo').value;
+        const selectCod = document.getElementById('codigo');
+        selectCod.innerHTML = '<option value="">Seleccione código...</option>';
+
+        const codigosFiltrados = listaTeoricosGlobal.filter(t => 
+            String(t.centro_trabajo).toLowerCase().trim() === String(sectorElegido).toLowerCase().trim()
+        );
+
+        codigosFiltrados.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.codigo;
+            opt.textContent = `${t.codigo} - ${t.descripcion}`;
+            selectCod.appendChild(opt);
+        });
+    }
+
+    function cerrarFormulario() {
+        document.getElementById('modal-planilla').style.display = 'none';
+    }
+
+    async function guardarPlanilla(e) {
+        e.preventDefault();
+        
+        const payload = {
+            fecha: document.getElementById('fecha').value,
+            planta: plantaActual,
+            turno: document.getElementById('turno').value,
+            centro_trabajo: document.getElementById('centro_trabajo').value,
+            codigo: document.getElementById('codigo').value,
+            horas_trabajadas: parseFloat(document.getElementById('horas_trabajadas').value) || 0,
+            dotacion_teorica: parseFloat(document.getElementById('dotacion_teorica').value) || 0,
+            dotacion_real: parseFloat(document.getElementById('dotacion_real').value) || 0,
+            kg_cajas_reales: parseFloat(document.getElementById('kg_cajas_reales').value) || 0,
+            peso_promedio_unid_kg: parseFloat(document.getElementById('peso_promedio_unid_kg').value) || 0,
+            decomiso_kg: parseFloat(document.getElementById('decomiso_kg').value) || 0,
+            reproceso_kg: parseFloat(document.getElementById('reproceso_kg').value) || 0,
+            scrap_flex_kg: parseFloat(document.getElementById('scrap_flex_kg').value) || 0
+        };
+
+        const res = await fetch('/api/planillas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            cerrarFormulario();
+            cargarPlanillas(); // Actualiza la tabla consolidada en vivo
+        } else {
+            alert("Error al registrar la planilla.");
+        }
+    }
+</script>
+</body>
+</html>
