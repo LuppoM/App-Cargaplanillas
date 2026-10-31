@@ -5,64 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carga de Planillas - Producción</title>
     <link rel="stylesheet" href="/static/planillasvista.css">
-    <style>
-        /* Estilos alineados a la estructura visual del sistema */
-        .tabs-container {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #ccc;
-        }
-        .tab-button {
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: bold;
-            border: none;
-            background-color: #e0e0e0;
-            cursor: pointer;
-            border-radius: 5px 5px 0 0;
-            transition: background-color 0.2s;
-        }
-        .tab-button.active {
-            background-color: #0056b3;
-            color: white;
-            border-bottom: 2px solid #0056b3;
-        }
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-        .seccion-titulo {
-            grid-column: 1 / -1;
-            font-weight: bold;
-            font-size: 15px;
-            margin-top: 10px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 4px;
-            color: #333;
-        }
-        .btn-edit {
-            background-color: #ffc107;
-            color: #212529;
-            border: none;
-            padding: 4px 8px;
-            font-size: 12px;
-            font-weight: bold;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-        .btn-edit:hover {
-            background-color: #e0a800;
-        }
-    </style>
 </head>
 <body>
 
@@ -83,7 +25,7 @@
         <input type="date" id="filtro-fecha" onchange="aplicarFiltros()">
     </div>
 
-    <!-- Tabla General Consolidada con Indicadores y KPIs -->
+    <!-- Tabla General Consolidada -->
     <div class="tabla-container">
         <table>
             <thead>
