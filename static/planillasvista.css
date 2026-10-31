@@ -1,56 +1,182 @@
-/* Layout y Contenedores General */
+/* Layout General */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+}
+
 .header-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-}
-
-/* Filtros de búsqueda */
-.filtros-bar {
-    display: flex;
-    gap: 10px;
     margin-bottom: 15px;
 }
 
-.filtros-bar input {
-    padding: 8px 12px;
+.header-container h2 {
+    margin: 0;
+    font-size: 22px;
+    color: #212529;
+}
+
+/* Toolstrip (Barra Unificada de Acciones y Filtros) */
+.toolstrip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ffffff;
+    padding: 10px 16px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.toolstrip-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-tool {
+    background-color: #0056b3;
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-tool:hover {
+    background-color: #004085;
+}
+
+.btn-tool-edit {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.btn-tool-edit:hover {
+    background-color: #e0a800;
+}
+
+.btn-tool-back {
+    background-color: #6c757d;
+    color: #ffffff;
+}
+
+.btn-tool-back:hover {
+    background-color: #5a6268;
+}
+
+.filtros-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.toolstrip input[type="text"], 
+.toolstrip input[type="date"] {
+    padding: 6px 10px;
     font-size: 13px;
     border: 1px solid #ced4da;
     border-radius: 4px;
+    outline: none;
 }
 
-/* Pestañas / Solapas (Unificado) */
+.toolstrip input[type="text"]:focus, 
+.toolstrip input[type="date"]:focus {
+    border-color: #0056b3;
+    box-shadow: 0 0 0 2px rgba(0,86,179,0.15);
+}
+
+/* Pestañas / Solapas */
 .tabs-container {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     margin-bottom: 15px;
-    border-bottom: 2px solid #e0e0e0;
+    border-bottom: 2px solid #dee2e6;
 }
 
 .tab-button {
-    padding: 10px 24px;
-    font-size: 14px;
+    padding: 9px 20px;
+    font-size: 13px;
     font-weight: 600;
-    border: none;
-    background-color: #f1f3f5;
+    border: 1px solid transparent;
+    background-color: #e9ecef;
     color: #495057;
     cursor: pointer;
-    border-radius: 6px 6px 0 0;
+    border-radius: 5px 5px 0 0;
     transition: all 0.2s ease;
 }
 
 .tab-button:hover {
-    background-color: #e9ecef;
+    background-color: #dee2e6;
 }
 
 .tab-button.active {
     background-color: #0056b3;
     color: #ffffff;
-    border-bottom: 3px solid #003d80;
+    border-color: #0056b3;
 }
 
-/* Modales y Formularios */
+/* Tabla General Consolidada */
+.tabla-container {
+    overflow-x: auto;
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #212529;
+    white-space: nowrap;
+}
+
+tr:hover {
+    background-color: #f1f3f5;
+    cursor: pointer;
+}
+
+.fila-seleccionada {
+    background-color: #e2eafc !important;
+}
+
+/* Botón Editar en celda */
+.btn-edit {
+    background-color: #ffc107;
+    color: #212529;
+    border: none;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.btn-edit:hover {
+    background-color: #e0a800;
+}
+
+/* Modal Formulario */
 .modal {
     position: fixed;
     top: 0;
@@ -77,7 +203,7 @@
 .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 15px;
+    gap: 12px;
     margin-bottom: 20px;
 }
 
@@ -95,7 +221,7 @@
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
 }
 
 .form-group label {
@@ -111,70 +237,10 @@
     border-radius: 4px;
 }
 
-.form-group input[readonly] {
-    background-color: #e9ecef;
-    color: #495057;
-    cursor: not-allowed;
-}
-
-/* Tablas y Acciones */
-.tabla-container {
-    overflow-x: auto;
-    background: #ffffff;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-
-th, td {
-    padding: 10px 12px;
-    text-align: left;
-    border-bottom: 1px solid #dee2e6;
-}
-
-th {
-    background-color: #f8f9fa;
-    font-weight: 600;
-    color: #212529;
-}
-
-tr:hover {
-    background-color: #f1f3f5;
-}
-
-.fila-seleccionada {
-    background-color: #e2eafc !important;
-}
-
-/* Botones */
-.btn-sm {
-    padding: 4px 8px;
-    font-size: 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    background-color: #6c757d;
-    color: #fff;
-}
-
-.btn-edit {
-    background-color: #ffc107;
-    color: #212529;
-    border: none;
-    padding: 5px 10px;
-    font-size: 12px;
-    font-weight: bold;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.btn-edit:hover {
-    background-color: #e0a800;
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
 }
 
 .btn-save {
@@ -184,6 +250,7 @@ tr:hover {
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
+    font-weight: 600;
 }
 
 .btn-cancel {
@@ -193,4 +260,5 @@ tr:hover {
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
+    font-weight: 600;
 }
