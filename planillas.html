@@ -104,12 +104,13 @@
                 <input type="hidden" id="planta-activa" name="planta" value="chocolate">
 
                 <div class="form-grid">
-                    <div class="seccion-titulo">1. Contexto del Turno</div>
-                    
+                   <div class="seccion-titulo">1. Contexto del Turno</div>
+
                     <div class="form-group">
                         <label>Fecha</label>
                         <input type="date" id="fecha" required>
                     </div>
+
                     <div class="form-group">
                         <label>Turno</label>
                         <select id="turno" required>
@@ -118,17 +119,22 @@
                             <option value="Noche">Noche</option>
                         </select>
                     </div>
+
                     <div class="form-group">
                         <label>Centro de Trabajo</label>
-                        <select id="centro_trabajo" required onchange="filtrarCodigosPorSector()">
+                        <select id="centro_trabajo" required>
                             <option value="">Seleccione sector...</option>
                         </select>
                     </div>
+
                     <div class="form-group">
                         <label>Código Producto</label>
-                        <select id="codigo" required onchange="obtenerDatosTeoricoAuto()">
-                            <option value="">Seleccione código...</option>
-                        </select>
+                        <input type="text" id="codigo" placeholder="Ej: 10204" required oninput="buscarDescripcionYTeoricoAuto()">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Descripción Producto (Auto)</label>
+                        <input type="text" id="descripcion_producto" readonly placeholder="Sin coincidencia" style="background-color: #f0f0f0; font-weight: bold; color: #0056b3;">
                     </div>
 
                     <div class="seccion-titulo">2. Tiempos y Personas</div>
@@ -195,7 +201,9 @@
         document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
         
         // Activa el botón visual correspondiente
-        event.target.classList.add('active');
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
         
         // Filtra la tabla consolidada por la solapa activa
         renderizarTabla();
@@ -260,36 +268,13 @@
         });
     }
 
-    // Dispara la búsqueda automática al seleccionar CÓDIGO para traer la Dotación Teórica
-    function obtenerDatosTeoricoAuto() {
-        const codSeleccionado = document.getElementById('codigo').value;
-        const teoricoEncontrado = listaTeoricosGlobal.find(t => String(t.codigo) === String(codSeleccionado));
-        
-        if (teoricoEncontrado) {
-            // Asigna automáticamente la Dotación Teórica registrada previamente
-            document.getElementById('dotacion_teorica').value = teoricoEncontrado.dotacion || 0;
-        } else {
-            document.getElementById('dotacion_teorica').value = 0;
-        }
-    }
-
-    function abrirFormulario() {
-        document.getElementById('form-planilla').reset();
-        document.getElementById('planta-activa').value = plantaActual;
-        
-        // Poblar sectores filtrados por la planta activa
-        poblarComboSectores();
-        
-        document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
-        document.getElementById('modal-planilla').style.display = 'flex';
-    }
-
+    // Poblar combo Centro de Trabajo filtrado por la planta activa
     function poblarComboSectores() {
         const selectSec = document.getElementById('centro_trabajo');
         selectSec.innerHTML = '<option value="">Seleccione sector...</option>';
 
         const sectoresFiltrados = listaSectoresGlobal.filter(s => 
-            String(s.planta).toLowerCase().trim() === plantaActual && s.activo
+            String(s.planta).toLowerCase().trim() === plantaActual && (s.activo === undefined || s.activo === true)
         );
 
         sectoresFiltrados.forEach(s => {
@@ -300,21 +285,45 @@
         });
     }
 
-    function filtrarCodigosPorSector() {
-        const sectorElegido = document.getElementById('centro_trabajo').value;
-        const selectCod = document.getElementById('codigo');
-        selectCod.innerHTML = '<option value="">Seleccione código...</option>';
+    // Búsqueda automática al tipear el CÓDIGO manualmente
+    function buscarDescripcionYTeoricoAuto() {
+        const codInput = document.getElementById('codigo').value.trim();
+        const inputDesc = document.getElementById('descripcion_producto');
+        const inputDotacion = document.getElementById('dotacion_teorica');
 
-        const codigosFiltrados = listaTeoricosGlobal.filter(t => 
-            String(t.centro_trabajo).toLowerCase().trim() === String(sectorElegido).toLowerCase().trim()
+        if (!codInput) {
+            inputDesc.value = '';
+            inputDotacion.value = 0;
+            return;
+        }
+
+        // Busca coincidencia por código en la tabla global de teóricos
+        const teoricoEncontrado = listaTeoricosGlobal.find(t => 
+            String(t.codigo).toLowerCase().trim() === String(codInput).toLowerCase().trim()
         );
 
-        codigosFiltrados.forEach(t => {
-            const opt = document.createElement('option');
-            opt.value = t.codigo;
-            opt.textContent = `${t.codigo} - ${t.descripcion}`;
-            selectCod.appendChild(opt);
-        });
+        if (teoricoEncontrado) {
+            inputDesc.value = teoricoEncontrado.descripcion || 'Sin descripción';
+            inputDotacion.value = teoricoEncontrado.dotacion || 0;
+        } else {
+            inputDesc.value = '⚠️ Código no encontrado';
+            inputDotacion.value = 0;
+        }
+    }
+
+    function abrirFormulario() {
+        document.getElementById('form-planilla').reset();
+        document.getElementById('planta-activa').value = plantaActual;
+        
+        // Limpia el campo auxiliar de lectura
+        const inputDesc = document.getElementById('descripcion_producto');
+        if (inputDesc) inputDesc.value = '';
+        
+        // Poblar sectores filtrados por la planta activa
+        poblarComboSectores();
+        
+        document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
+        document.getElementById('modal-planilla').style.display = 'flex';
     }
 
     function cerrarFormulario() {
@@ -329,7 +338,7 @@
             planta: plantaActual,
             turno: document.getElementById('turno').value,
             centro_trabajo: document.getElementById('centro_trabajo').value,
-            codigo: document.getElementById('codigo').value,
+            codigo: document.getElementById('codigo').value.trim(),
             horas_trabajadas: parseFloat(document.getElementById('horas_trabajadas').value) || 0,
             dotacion_teorica: parseFloat(document.getElementById('dotacion_teorica').value) || 0,
             dotacion_real: parseFloat(document.getElementById('dotacion_real').value) || 0,
@@ -340,17 +349,22 @@
             scrap_flex_kg: parseFloat(document.getElementById('scrap_flex_kg').value) || 0
         };
 
-        const res = await fetch('/api/planillas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        try {
+            const res = await fetch('/api/planillas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-        if (res.ok) {
-            cerrarFormulario();
-            cargarPlanillas(); // Actualiza la tabla consolidada en vivo
-        } else {
-            alert("Error al registrar la planilla.");
+            if (res.ok) {
+                cerrarFormulario();
+                cargarPlanillas(); // Actualiza la tabla consolidada en vivo
+            } else {
+                alert("Error al registrar la planilla.");
+            }
+        } catch (err) {
+            console.error("Error al guardar planilla:", err);
+            alert("Error de conexión al intentar guardar.");
         }
     }
 </script>
