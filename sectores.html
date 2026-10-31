@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Sectores</title>
+    <link rel="stylesheet" href="/static/sectoresvista.css">
+</head>
+<body>
+
+    <div class="sectores-screen">
+        
+        <!-- ENCABEZADO SUPERIOR -->
+        <header class="top-header">
+            <h1>GESTIÓN DE SECTORES / ÁREAS DE PRODUCCIÓN</h1>
+            
+            <div class="toolbar">
+                <button class="btn-tool" onclick="abrirFormulario()">+ Nuevo Sector</button>
+                <button class="btn-tool" onclick="editarSeleccionado()">Modificar</button>
+                <a href="/" class="btn-tool btn-cerrar-pantalla" style="text-decoration: none; display: inline-block;">Volver</a>
+            </div>
+            
+            <div class="filtros-bar">
+                <label for="input-buscar">Buscar General:</label>
+                <input type="text" id="input-buscar" placeholder="Buscar en toda la tabla..." onkeyup="filtrarTablaGeneral()">
+            </div>
+        </header>
+
+        <!-- TABLA -->
+        <main class="tabla-container">
+            <table class="tabla-sectores">
+                <thead>
+                    <!-- FILA DE FILTROS POR COLUMNA -->
+                    <tr class="fila-filtros">
+                        <th><input type="text" class="input-filtro-col" placeholder="id" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="nombre" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="planta" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="descripcion" onkeyup="filtrarColumnas()"></th>
+                        <th><input type="text" class="input-filtro-col" placeholder="estado" onkeyup="filtrarColumnas()"></th>
+                    </tr>
+                    <!-- TITULOS DE COLUMNAS -->
+                    <tr class="titulos-cabecera">
+                        <th>id</th>
+                        <th>nombre</th>
+                        <th>planta</th>
+                        <th>descripción</th>
+                        <th>estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-sectores">
+                    <!-- Registros dinámicos -->
+                </tbody>
+            </table>
+        </main>
+    </div>
+
+    <!-- MODAL Y FORMULARIO -->
+    <div id="modal-sector" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-titulo">Nuevo Sector</h3>
+                <span class="btn-cerrar" onclick="cerrarFormulario()">&times;</span>
+            </div>
+            
+            <form id="form-sector" onsubmit="guardarSector(event)">
+                <input type="hidden" id="sector-id">
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Nombre del Sector</label>
+                        <input type="text" id="nombre" required placeholder="Ej: Envasado, Moldeado, etc.">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Planta / Sector General</label>
+                        <select id="planta" required>
+                            <option value="chocolate">Chocolate</option>
+                            <option value="golosinas">Golosinas</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <textarea id="descripcion" rows="3" placeholder="Detalles operativos del sector..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <select id="activo" required>
+                            <option value="true">Activo</option>
+                            <option value="false">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancelar" onclick="cerrarFormulario()">Cancelar</button>
+                    <button type="submit" class="btn-guardar">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE LOGICA Y PAGINACIÓN -->
+    <script>
+        let objetoSeleccionado = null;
+        let datosGlobales = [];
+        let datosFiltrados = [];
+        let paginaActual = 1;
+        const registrosPorPagina = 50;
+        let temporizadorFiltro = null;
+
+        document.addEventListener('DOMContentLoaded', cargarSectores);
+
+        async function cargarSectores() {
+            try {
+                const res = await fetch('/api/sectores');
+                const resJson = await res.json();
+                datosGlobales = resJson.datos || [];
+                datosFiltrados = [...datosGlobales];
+                paginaActual = 1;
+                renderizarTabla();
+            } catch (e) {
+                console.error("Error al cargar sectores:", e);
+            }
+        }
+
+        function renderizarTabla() {
+            const tbody = document.getElementById('tbody-sectores');
+            tbody.innerHTML = '';
+            objetoSeleccionado = null;
+
+            const inicio = (paginaActual - 1) * registrosPorPagina;
+            const fin = inicio + registrosPorPagina;
+            const paginaDatos = datosFiltrados.slice(inicio, fin);
+
+            paginaDatos.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.onclick = function() {
+                    document.querySelectorAll('#tbody-sectores tr').forEach(r => r.classList.remove('fila-seleccionada'));
+                    tr.classList.add('fila-seleccionada');
+                    objetoSeleccionado = item;
+                };
+
+                const estadoTexto = item.activo ? 'Activo' : 'Inactivo';
+
+                tr.innerHTML = `
+                    <td>${item.id ?? ''}</td>
+                    <td><strong>${item.nombre ?? ''}</strong></td>
+                    <td>${item.planta ?? ''}</td>
+                    <td>${item.descripcion ?? ''}</td>
+                    <td>${estadoTexto}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            actualizarControlesPaginacion();
+        }
+
+        function actualizarControlesPaginacion() {
+            let contenedor = document.getElementById('paginacion-container');
+            if (!contenedor) {
+                contenedor = document.createElement('div');
+                contenedor.id = 'paginacion-container';
+                contenedor.style.cssText = 'padding: 10px; display: flex; gap: 10px; align-items: center; justify-content: flex-end; font-size: 13px; font-weight: bold;';
+                document.querySelector('.tabla-container').after(contenedor);
+            }
+
+            const totalPaginas = Math.ceil(datosFiltrados.length / registrosPorPagina) || 1;
+            contenedor.innerHTML = `
+                <span>Mostrando ${datosFiltrados.length} registros (Página ${paginaActual} de ${totalPaginas})</span>
+                <button class="btn-tool" ${paginaActual === 1 ? 'disabled' : ''} onclick="cambiarPagina(-1)">Anterior</button>
+                <button class="btn-tool" ${paginaActual >= totalPaginas ? 'disabled' : ''} onclick="cambiarPagina(1)">Siguiente</button>
+            `;
+        }
+
+        function cambiarPagina(delta) {
+            paginaActual += delta;
+            renderizarTabla();
+        }
+
+        function aplicarFiltros() {
+            clearTimeout(temporizadorFiltro);
+            temporizadorFiltro = setTimeout(() => {
+                const buscarGeneral = document.getElementById('input-buscar').value.toLowerCase().trim();
+                const inputsCols = Array.from(document.querySelectorAll('.input-filtro-col'));
+                
+                const filtrosCols = inputsCols.map((input, idx) => ({
+                    idx,
+                    val: input.value.toLowerCase().trim()
+                })).filter(f => f.val !== '');
+
+                const llaves = ['id', 'nombre', 'planta', 'descripcion', 'activo'];
+
+                datosFiltrados = datosGlobales.filter(item => {
+                    if (buscarGeneral) {
+                        const textoFila = Object.values(item).join(' ').toLowerCase();
+                        if (!textoFila.includes(buscarGeneral)) return false;
+                    }
+
+                    for (let f of filtrosCols) {
+                        const clave = llaves[f.idx];
+                        let valorCelda = String(item[clave] ?? '').toLowerCase();
+                        if (clave === 'activo') {
+                            valorCelda = item.activo ? 'activo' : 'inactivo';
+                        }
+                        if (!valorCelda.includes(f.val)) return false;
+                    }
+
+                    return true;
+                });
+
+                paginaActual = 1;
+                renderizarTabla();
+            }, 200);
+        }
+
+        function filtrarTablaGeneral() { aplicarFiltros(); }
+        function filtrarColumnas() { aplicarFiltros(); }
+
+        function abrirFormulario() {
+            document.getElementById('form-sector').reset();
+            document.getElementById('sector-id').value = '';
+            document.getElementById('modal-titulo').innerText = 'Nuevo Sector';
+            document.getElementById('modal-sector').style.display = 'flex';
+        }
+
+        function cerrarFormulario() {
+            document.getElementById('modal-sector').style.display = 'none';
+        }
+
+        function editarSeleccionado() {
+            if (!objetoSeleccionado) {
+                alert("Seleccioná una fila de la tabla haciéndole clic para modificarla.");
+                return;
+            }
+            editarSector(objetoSeleccionado);
+        }
+
+        function editarSector(item) {
+            document.getElementById('sector-id').value = item.id;
+            document.getElementById('nombre').value = item.nombre || '';
+            document.getElementById('planta').value = item.planta || 'chocolate';
+            document.getElementById('descripcion').value = item.descripcion || '';
+            document.getElementById('activo').value = item.activo ? 'true' : 'false';
+
+            document.getElementById('modal-titulo').innerText = 'Editar Sector';
+            document.getElementById('modal-sector').style.display = 'flex';
+        }
+
+        async function guardarSector(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('sector-id').value;
+            const payload = {
+                nombre: document.getElementById('nombre').value,
+                planta: document.getElementById('planta').value,
+                descripcion: document.getElementById('descripcion').value,
+                activo: document.getElementById('activo').value === 'true'
+            };
+
+            const url = id ? `/api/sectores/${id}` : '/api/sectores';
+            const method = id ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                cerrarFormulario();
+                cargarSectores();
+            } else {
+                alert("Error al guardar el sector.");
+            }
+        }
+    </script>
+</body>
+</html>
