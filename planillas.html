@@ -6,7 +6,7 @@
     <title>Carga de Planillas - Producción</title>
     <link rel="stylesheet" href="/static/planillasvista.css">
     <style>
-        /* Estilos para las solapas (Tabs) */
+        /* Estilos alineados a la estructura visual del sistema */
         .tabs-container {
             display: flex;
             gap: 5px;
@@ -48,6 +48,19 @@
             border-bottom: 1px solid #ddd;
             padding-bottom: 4px;
             color: #333;
+        }
+        .btn-edit {
+            background-color: #ffc107;
+            color: #212529;
+            border: none;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .btn-edit:hover {
+            background-color: #e0a800;
         }
     </style>
 </head>
@@ -100,7 +113,7 @@
         </table>
     </div>
 
-    <!-- Modal Formulario de Carga -->
+    <!-- Modal Formulario de Carga y Modificación -->
     <div id="modal-planilla" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 900px;">
             <h3 id="modal-titulo">Cargar Planilla de Producción</h3>
@@ -154,8 +167,8 @@
                         <input type="number" step="0.01" id="dotacion_teorica" readonly style="background-color: #f0f0f0;">
                     </div>
                     <div class="form-group">
-                        <label>Dotación Real</label>
-                        <input type="number" step="0.01" id="dotacion_real">
+                        <label>Dotación Real (Opcional)</label>
+                        <input type="number" step="0.01" id="dotacion_real" placeholder="Toma teórica si se omite">
                     </div>
 
                     <div class="seccion-titulo">3. Producción y Mermas</div>
@@ -166,7 +179,7 @@
                     </div>
                     <div class="form-group">
                         <label>Peso Promedio Unid (kg)</label>
-                        <input type="number" step="0.0001" id="peso_promedio_unid_kg" >
+                        <input type="number" step="0.0001" id="peso_promedio_unid_kg" value="0">
                     </div>
                     <div class="form-group">
                         <label>Decomiso (kg)</label>
@@ -201,21 +214,16 @@
         cargarPlanillas();
     });
 
-    // Cambia la vista entre Chocolate y Golosinas
     function cambiarSolapa(planta) {
         plantaActual = planta;
         document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
         
-        // Activa el botón visual correspondiente
         if (event && event.target) {
             event.target.classList.add('active');
         }
-        
-        // Filtra la tabla consolidada por la solapa activa
         renderizarTabla();
     }
 
-    // Carga de sectores y teóricos para autocompletar combos y dotación
     async function cargarBaseDatosAuxiliares() {
         try {
             const [resSec, resTeor] = await Promise.all([
@@ -232,7 +240,6 @@
         }
     }
 
-    // Consulta la lista consolidada de planillas desde PostgreSQL
     async function cargarPlanillas() {
         try {
             const res = await fetch('/api/planillas');
@@ -244,7 +251,6 @@
         }
     }
 
-    // Función pura para calcular todos los KPIs dinámicamente
     function calcularKPIs(item) {
         const hsTrab = parseFloat(item.horas_trabajadas) || 0;
         const kgReales = parseFloat(item.kg_cajas_reales) || 0;
@@ -253,7 +259,6 @@
         const scrapKg = parseFloat(item.scrap_flex_kg) || 0;
         const pesoPromReal = parseFloat(item.peso_promedio_unid_kg) || 0;
 
-        // Buscar el teórico para obtener Kg Teórico y Peso Teórico Estándar
         const teorico = listaTeoricosGlobal.find(t => String(t.codigo).trim() === String(item.codigo).trim());
         
         let kgTeorico = 0;
@@ -265,22 +270,12 @@
             kgTeorico = uxb * pesoTeorico * bultosHora * hsTrab;
         }
 
-        // 1. Eficiencia Real %
         const eficRealPct = kgTeorico > 0 ? ((kgReales / kgTeorico) * 100) : 0;
-
-        // 2. Reproceso %
         const reprocesoPct = kgReales > 0 ? ((reprocesoKg / kgReales) * 100) : 0;
-
-        // 3. Decomiso %
         const decomisoPct = kgReales > 0 ? ((decomisoKg / kgReales) * 100) : 0;
-
-        // 4. Desvío de Peso %
-        const desvioPesoPct = pesoTeorico > 0 ? (((pesoPromReal - pesoTeorico) / pesoTeorico) * 100) : 0;
-
-        // 5. Scrap %
+        const desvioPesoPct = (pesoTeorico > 0 && pesoPromReal > 0) ? (((pesoPromReal - pesoTeorico) / pesoTeorico) * 100) : 0;
         const scrapPct = kgReales > 0 ? ((scrapKg / kgReales) * 100) : 0;
 
-        // 6. Total Detenciones e Incidencia %
         const ttDetenciones = (parseFloat(item.detencion_produccion) || 0) +
                               (parseFloat(item.detencion_refrigerio) || 0) +
                               (parseFloat(item.detencion_mecanico) || 0) +
@@ -307,7 +302,6 @@
         };
     }
 
-    // Renderizado de tabla consolidada con columnas calculadas en vivo
     function renderizarTabla() {
         const tbody = document.getElementById('tbody-planillas');
         tbody.innerHTML = '';
@@ -338,14 +332,13 @@
                 <td>${kpi.incidenciaPct}%</td>
                 <td>${item.dotacion_real}</td>
                 <td>
-                    <button class="btn-sm" onclick="editarPlanilla(${item.id})">Editar</button>
+                    <button class="btn-edit" onclick="modificarPlanilla(${item.id})">Modificar</button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    // Poblar combo Centro de Trabajo filtrado por la planta activa
     function poblarComboSectores() {
         const selectSec = document.getElementById('centro_trabajo');
         selectSec.innerHTML = '<option value="">Seleccione sector...</option>';
@@ -362,7 +355,6 @@
         });
     }
 
-    // Búsqueda automática al tipear el CÓDIGO manualmente
     function buscarDescripcionYTeoricoAuto() {
         const codInput = document.getElementById('codigo').value.trim();
         const inputDesc = document.getElementById('descripcion_producto');
@@ -374,7 +366,6 @@
             return;
         }
 
-        // Busca coincidencia por código en la tabla global de teóricos
         const teoricoEncontrado = listaTeoricosGlobal.find(t => 
             String(t.codigo).toLowerCase().trim() === String(codInput).toLowerCase().trim()
         );
@@ -390,16 +381,43 @@
 
     function abrirFormulario() {
         document.getElementById('form-planilla').reset();
+        document.getElementById('planilla-id').value = '';
         document.getElementById('planta-activa').value = plantaActual;
         
-        // Limpia el campo auxiliar de lectura
         const inputDesc = document.getElementById('descripcion_producto');
         if (inputDesc) inputDesc.value = '';
         
-        // Poblar sectores filtrados por la planta activa
         poblarComboSectores();
         
         document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
+        document.getElementById('modal-planilla').style.display = 'flex';
+    }
+
+    function modificarPlanilla(id) {
+        const registro = datosGlobales.find(p => p.id === id);
+        if (!registro) return;
+
+        document.getElementById('planilla-id').value = registro.id;
+        document.getElementById('fecha').value = registro.fecha;
+        document.getElementById('turno').value = registro.turno;
+        
+        poblarComboSectores();
+        document.getElementById('centro_trabajo').value = registro.centro_trabajo;
+        
+        document.getElementById('codigo').value = registro.codigo;
+        buscarDescripcionYTeoricoAuto();
+
+        document.getElementById('horas_trabajadas').value = registro.horas_trabajadas;
+        document.getElementById('dotacion_teorica').value = registro.dotacion_teorica;
+        document.getElementById('dotacion_real').value = registro.dotacion_real;
+
+        document.getElementById('kg_cajas_reales').value = registro.kg_cajas_reales;
+        document.getElementById('peso_promedio_unid_kg').value = registro.peso_promedio_unid_kg;
+        document.getElementById('decomiso_kg').value = registro.decomiso_kg;
+        document.getElementById('reproceso_kg').value = registro.reproceso_kg;
+        document.getElementById('scrap_flex_kg').value = registro.scrap_flex_kg;
+
+        document.getElementById('modal-titulo').innerText = `Modificar Planilla #${registro.id} (${plantaActual.toUpperCase()})`;
         document.getElementById('modal-planilla').style.display = 'flex';
     }
 
@@ -410,6 +428,11 @@
     async function guardarPlanilla(e) {
         e.preventDefault();
         
+        const idEdit = document.getElementById('planilla-id').value;
+        const dotTeorica = parseFloat(document.getElementById('dotacion_teorica').value) || 0;
+        const dotRealInput = document.getElementById('dotacion_real').value;
+        const dotReal = dotRealInput !== "" ? parseFloat(dotRealInput) : dotTeorica;
+
         const payload = {
             fecha: document.getElementById('fecha').value,
             planta: plantaActual,
@@ -417,8 +440,8 @@
             centro_trabajo: document.getElementById('centro_trabajo').value,
             codigo: document.getElementById('codigo').value.trim(),
             horas_trabajadas: parseFloat(document.getElementById('horas_trabajadas').value) || 0,
-            dotacion_teorica: parseFloat(document.getElementById('dotacion_teorica').value) || 0,
-            dotacion_real: parseFloat(document.getElementById('dotacion_real').value) || 0,
+            dotacion_teorica: dotTeorica,
+            dotacion_real: dotReal,
             kg_cajas_reales: parseFloat(document.getElementById('kg_cajas_reales').value) || 0,
             peso_promedio_unid_kg: parseFloat(document.getElementById('peso_promedio_unid_kg').value) || 0,
             decomiso_kg: parseFloat(document.getElementById('decomiso_kg').value) || 0,
@@ -426,18 +449,22 @@
             scrap_flex_kg: parseFloat(document.getElementById('scrap_flex_kg').value) || 0
         };
 
+        const esEdicion = Boolean(idEdit);
+        const url = esEdicion ? `/api/planillas/${idEdit}` : '/api/planillas';
+        const metodo = esEdicion ? 'PUT' : 'POST';
+
         try {
-            const res = await fetch('/api/planillas', {
-                method: 'POST',
+            const res = await fetch(url, {
+                method: metodo,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             if (res.ok) {
                 cerrarFormulario();
-                cargarPlanillas(); // Actualiza la tabla consolidada en vivo
+                cargarPlanillas();
             } else {
-                alert("Error al registrar la planilla.");
+                alert(`Error al ${esEdicion ? 'actualizar' : 'registrar'} la planilla.`);
             }
         } catch (err) {
             console.error("Error al guardar planilla:", err);
@@ -455,7 +482,6 @@
             const textoFila = fila.innerText.toLowerCase();
             const coincideTexto = !textoBusqueda || textoFila.includes(textoBusqueda);
             
-            // Si hay filtro de fecha se valida con la celda de fecha (columna index 1)
             const celdaFecha = fila.children[1] ? fila.children[1].innerText : '';
             const coincideFecha = !fechaBusqueda || celdaFecha === fechaBusqueda;
 
