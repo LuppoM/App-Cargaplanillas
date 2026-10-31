@@ -262,3 +262,31 @@ tr:hover {
     cursor: pointer;
     font-weight: 600;
 }
+/* Sub-pestañas internas dentro del Modal */
+.modal-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.modal-tab-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    background-color: #f8f9fa;
+    color: #495057;
+    cursor: pointer;
+    border-radius: 4px 4px 0 0;
+    transition: all 0.2s ease;
+}
+
+.modal-tab-btn:hover {
+    background-color: #e2e6ea;
+}
+
+.modal-tab-btn.active {
+    background-color: #0056b3;
+    color: #ffffff;
+}

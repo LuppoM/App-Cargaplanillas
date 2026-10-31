@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carga de Planillas - Producción</title>
-    <link rel="stylesheet" href="/static/planillasvista.css?v=1.3">
+    <link rel="stylesheet" href="/static/planillasvista.css?v=1.4">
 </head>
 <body>
 
@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <!-- Navegación por Solapas/Pestañas -->
+    <!-- Solapas por Planta -->
     <div class="tabs-container">
         <button class="tab-button active" onclick="cambiarSolapa('chocolate')">Planta Chocolate</button>
         <button class="tab-button" onclick="cambiarSolapa('golosinas')">Planta Golosinas</button>
@@ -49,7 +49,6 @@
                     <th>Efic Real %</th>
                     <th>Decomiso %</th>
                     <th>Reproceso %</th>
-                    <th>Desvío Peso %</th>
                     <th>Scrap %</th>
                     <th>Incidencia %</th>
                     <th>Dot. Real</th>
@@ -57,94 +56,151 @@
                 </tr>
             </thead>
             <tbody id="tbody-planillas">
-                <!-- Se puebla dinámicamente -->
+                <!-- Carga dinámica desde la API -->
             </tbody>
         </table>
     </div>
 
-    <!-- Modal Formulario de Carga y Modificación -->
+    <!-- Modal de Carga y Modificación Completo -->
     <div id="modal-planilla" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-content" style="max-width: 950px;">
             <h3 id="modal-titulo">Cargar Planilla de Producción</h3>
             
+            <!-- Sub-navegación dentro del Modal -->
+            <div class="modal-tabs">
+                <button type="button" class="modal-tab-btn active" onclick="cambiarTabModal('sec-general')">1. Contexto y Tiempos</button>
+                <button type="button" class="modal-tab-btn" onclick="cambiarTabModal('sec-mermas')">2. Producción y Mermas</button>
+                <button type="button" class="modal-tab-btn" onclick="cambiarTabModal('sec-detenciones')">3. Detenciones (Minutos)</button>
+            </div>
+
             <form id="form-planilla" onsubmit="guardarPlanilla(event)">
                 <input type="hidden" id="planilla-id">
-                <input type="hidden" id="planta-activa" name="planta" value="chocolate">
 
-                <div class="form-grid">
-                    <div class="seccion-titulo">1. Contexto del Turno</div>
-
-                    <div class="form-group">
-                        <label>Fecha</label>
-                        <input type="date" id="fecha" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Turno</label>
-                        <select id="turno" required>
-                            <option value="Mañana">Mañana</option>
-                            <option value="Tarde">Tarde</option>
-                            <option value="Noche">Noche</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Centro de Trabajo</label>
-                        <select id="centro_trabajo" required>
-                            <option value="">Seleccione sector...</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Código Producto</label>
-                        <input type="text" id="codigo" placeholder="Ej: 10204" required oninput="buscarDescripcionYTeoricoAuto()">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Descripción Producto (Auto)</label>
-                        <input type="text" id="descripcion_producto" readonly placeholder="Sin coincidencia" style="background-color: #f0f0f0; font-weight: bold; color: #0056b3;">
-                    </div>
-
-                    <div class="seccion-titulo">2. Tiempos y Personas</div>
-                    
-                    <div class="form-group">
-                        <label>Horas Trabajadas</label>
-                        <input type="number" step="0.01" id="horas_trabajadas" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Dotación Teórica (Auto)</label>
-                        <input type="number" step="0.01" id="dotacion_teorica" readonly style="background-color: #f0f0f0;">
-                    </div>
-                    <div class="form-group">
-                        <label>Dotación Real (Opcional)</label>
-                        <input type="number" step="0.01" id="dotacion_real" placeholder="Toma teórica si se omite">
-                    </div>
-
-                    <div class="seccion-titulo">3. Producción y Mermas</div>
-                    
-                    <div class="form-group">
-                        <label>Kg/Cajas Reales</label>
-                        <input type="number" step="0.01" id="kg_cajas_reales" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Peso Promedio Unid (kg)</label>
-                        <input type="number" step="0.0001" id="peso_promedio_unid_kg" value="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Decomiso (kg)</label>
-                        <input type="number" step="0.01" id="decomiso_kg" value="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Reproceso (kg)</label>
-                        <input type="number" step="0.01" id="reproceso_kg" value="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Scrap Flex (kg)</label>
-                        <input type="number" step="0.01" id="scrap_flex_kg" value="0">
+                <!-- SECCIÓN 1: GENERAL -->
+                <div id="sec-general" class="modal-section active">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Fecha</label>
+                            <input type="date" id="fecha" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Turno</label>
+                            <select id="turno" required>
+                                <option value="Mañana">Mañana</option>
+                                <option value="Tarde">Tarde</option>
+                                <option value="Noche">Noche</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Centro de Trabajo (Sector)</label>
+                            <select id="centro_trabajo" required>
+                                <option value="">Seleccione sector...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Código Producto</label>
+                            <input type="text" id="codigo" placeholder="Ej: 10204" required oninput="buscarDescripcionYTeoricoAuto()">
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Descripción Producto (Auto)</label>
+                            <input type="text" id="descripcion_producto" readonly placeholder="Sin coincidencia" style="background-color: #f0f0f0; font-weight: bold; color: #0056b3;">
+                        </div>
+                        <div class="form-group">
+                            <label>Horas Trabajadas</label>
+                            <input type="number" step="0.01" id="horas_trabajadas" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Dotación Teórica (Auto)</label>
+                            <input type="number" step="0.01" id="dotacion_teorica" readonly style="background-color: #f0f0f0;">
+                        </div>
+                        <div class="form-group">
+                            <label>Dotación Real (Opcional)</label>
+                            <input type="number" step="0.01" id="dotacion_real" placeholder="Toma teórica si omite">
+                        </div>
                     </div>
                 </div>
 
-                <div class="modal-buttons">
+                <!-- SECCIÓN 2: MERMAS Y PESOS -->
+                <div id="sec-mermas" class="modal-section" style="display: none;">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Kg / Cajas Reales</label>
+                            <input type="number" step="0.01" id="kg_cajas_reales" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Peso Promedio Unid (kg)</label>
+                            <input type="number" step="0.0001" id="peso_promedio_unid_kg" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Decomiso (kg)</label>
+                            <input type="number" step="0.01" id="decomiso_kg" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Reproceso (kg)</label>
+                            <input type="number" step="0.01" id="reproceso_kg" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Scrap Flex (kg)</label>
+                            <input type="number" step="0.01" id="scrap_flex_kg" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 3: DETENCIONES (EN MINUTOS) -->
+                <div id="sec-detenciones" class="modal-section" style="display: none;">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Producción (min)</label>
+                            <input type="number" step="1" id="detencion_produccion" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Refrigerio (min)</label>
+                            <input type="number" step="1" id="detencion_refrigerio" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Mecánico (min)</label>
+                            <input type="number" step="1" id="detencion_mecanico" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Eléctrico (min)</label>
+                            <input type="number" step="1" id="detencion_electrico" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Calidad (min)</label>
+                            <input type="number" step="1" id="detencion_calidad" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Programación (min)</label>
+                            <input type="number" step="1" id="detencion_programacion" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Limpieza (min)</label>
+                            <input type="number" step="1" id="detencion_limpieza" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Abastecimiento (min)</label>
+                            <input type="number" step="1" id="detencion_abastecimiento" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Desarrollo (min)</label>
+                            <input type="number" step="1" id="detencion_desarrollo" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Alistamiento (min)</label>
+                            <input type="number" step="1" id="detencion_alistamiento" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>RRHH (min)</label>
+                            <input type="number" step="1" id="detencion_rrhh" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Suministro (min)</label>
+                            <input type="number" step="1" id="detencion_suministro" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-buttons" style="margin-top: 20px;">
                     <button type="button" class="btn-cancel" onclick="cerrarFormulario()">Cancelar</button>
                     <button type="submit" class="btn-save">Guardar Registro</button>
                 </div>
@@ -168,11 +224,16 @@
         plantaActual = planta;
         idSeleccionado = null;
         document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-        
-        if (event && event.target) {
-            event.target.classList.add('active');
-        }
+        if (event && event.target) event.target.classList.add('active');
         renderizarTabla();
+    }
+
+    function cambiarTabModal(tabId) {
+        document.querySelectorAll('.modal-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.modal-section').forEach(sec => sec.style.display = 'none');
+
+        if (event && event.target) event.target.classList.add('active');
+        document.getElementById(tabId).style.display = 'block';
     }
 
     async function cargarBaseDatosAuxiliares() {
@@ -187,7 +248,7 @@
             listaSectoresGlobal = jsonSec.datos || [];
             listaTeoricosGlobal = jsonTeor.datos || [];
         } catch (e) {
-            console.error("Error al cargar datos auxiliares:", e);
+            console.error("Error al cargar auxiliares:", e);
         }
     }
 
@@ -208,46 +269,44 @@
         const decomisoKg = parseFloat(item.decomiso_kg) || 0;
         const reprocesoKg = parseFloat(item.reproceso_kg) || 0;
         const scrapKg = parseFloat(item.scrap_flex_kg) || 0;
-        const pesoPromReal = parseFloat(item.peso_promedio_unid_kg) || 0;
 
         const teorico = listaTeoricosGlobal.find(t => String(t.codigo).trim() === String(item.codigo).trim());
         
         let kgTeorico = 0;
-        let pesoTeorico = 0;
         if (teorico) {
-            pesoTeorico = parseFloat(teorico.peso) || 0;
+            const peso = parseFloat(teorico.peso) || 0;
             const uxb = parseFloat(teorico.uxb) || 0;
             const bultosHora = parseFloat(teorico.bultos_hora) || 0;
-            kgTeorico = uxb * pesoTeorico * bultosHora * hsTrab;
+            kgTeorico = uxb * peso * bultosHora * hsTrab;
         }
 
         const eficRealPct = kgTeorico > 0 ? ((kgReales / kgTeorico) * 100) : 0;
         const reprocesoPct = kgReales > 0 ? ((reprocesoKg / kgReales) * 100) : 0;
         const decomisoPct = kgReales > 0 ? ((decomisoKg / kgReales) * 100) : 0;
-        const desvioPesoPct = (pesoTeorico > 0 && pesoPromReal > 0) ? (((pesoPromReal - pesoTeorico) / pesoTeorico) * 100) : 0;
         const scrapPct = kgReales > 0 ? ((scrapKg / kgReales) * 100) : 0;
 
-        const ttDetenciones = (parseFloat(item.detencion_produccion) || 0) +
-                              (parseFloat(item.detencion_refrigerio) || 0) +
-                              (parseFloat(item.detencion_mecanico) || 0) +
-                              (parseFloat(item.detencion_electrico) || 0) +
-                              (parseFloat(item.detencion_calidad) || 0) +
-                              (parseFloat(item.detencion_programacion) || 0) +
-                              (parseFloat(item.detencion_limpieza) || 0) +
-                              (parseFloat(item.detencion_abastecimiento) || 0) +
-                              (parseFloat(item.detencion_desarrollo) || 0) +
-                              (parseFloat(item.detencion_alistamiento) || 0) +
-                              (parseFloat(item.detencion_rrhh) || 0) +
-                              (parseFloat(item.detencion_suministro) || 0);
+        // Suma de detenciones expresadas en minutos a horas
+        const ttDetencionesMin = (parseFloat(item.detencion_produccion) || 0) +
+                                 (parseFloat(item.detencion_refrigerio) || 0) +
+                                 (parseFloat(item.detencion_mecanico) || 0) +
+                                 (parseFloat(item.detencion_electrico) || 0) +
+                                 (parseFloat(item.detencion_calidad) || 0) +
+                                 (parseFloat(item.detencion_programacion) || 0) +
+                                 (parseFloat(item.detencion_limpieza) || 0) +
+                                 (parseFloat(item.detencion_abastecimiento) || 0) +
+                                 (parseFloat(item.detencion_desarrollo) || 0) +
+                                 (parseFloat(item.detencion_alistamiento) || 0) +
+                                 (parseFloat(item.detencion_rrhh) || 0) +
+                                 (parseFloat(item.detencion_suministro) || 0);
 
-        const incidenciaPct = hsTrab > 0 ? ((ttDetenciones / hsTrab) * 100) : 0;
+        const hsDetencion = ttDetencionesMin / 60;
+        const incidenciaPct = hsTrab > 0 ? ((hsDetencion / hsTrab) * 100) : 0;
 
         return {
             kgTeorico: kgTeorico.toFixed(2),
             eficRealPct: eficRealPct.toFixed(1),
             reprocesoPct: reprocesoPct.toFixed(2),
             decomisoPct: decomisoPct.toFixed(2),
-            desvioPesoPct: desvioPesoPct.toFixed(2),
             scrapPct: scrapPct.toFixed(2),
             incidenciaPct: incidenciaPct.toFixed(1)
         };
@@ -263,12 +322,10 @@
 
         filtrados.forEach(item => {
             const kpi = calcularKPIs(item);
-
             const tr = document.createElement('tr');
+            
             tr.onclick = () => seleccionarFila(tr, item.id);
-            if (idSeleccionado === item.id) {
-                tr.classList.add('fila-seleccionada');
-            }
+            if (idSeleccionado === item.id) tr.classList.add('fila-seleccionada');
 
             tr.innerHTML = `
                 <td>${item.id}</td>
@@ -283,10 +340,9 @@
                 <td><strong>${kpi.eficRealPct}%</strong></td>
                 <td>${kpi.decomisoPct}%</td>
                 <td>${kpi.reprocesoPct}%</td>
-                <td>${kpi.desvioPesoPct}%</td>
                 <td>${kpi.scrapPct}%</td>
                 <td>${kpi.incidenciaPct}%</td>
-                <td>${item.dotacion_real}</td>
+                <td>${item.dotacion_real || item.dotacion_teorica}</td>
                 <td>
                     <button class="btn-edit" onclick="event.stopPropagation(); modificarPlanilla(${item.id})">Editar</button>
                 </td>
@@ -352,11 +408,8 @@
     function abrirFormulario() {
         document.getElementById('form-planilla').reset();
         document.getElementById('planilla-id').value = '';
-        document.getElementById('planta-activa').value = plantaActual;
         
-        const inputDesc = document.getElementById('descripcion_producto');
-        if (inputDesc) inputDesc.value = '';
-        
+        cambiarTabModal('sec-general');
         poblarComboSectores();
         
         document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
@@ -364,30 +417,44 @@
     }
 
     function modificarPlanilla(id) {
-        const registro = datosGlobales.find(p => p.id === id);
-        if (!registro) return;
+        const r = datosGlobales.find(p => p.id === id);
+        if (!r) return;
 
-        document.getElementById('planilla-id').value = registro.id;
-        document.getElementById('fecha').value = registro.fecha;
-        document.getElementById('turno').value = registro.turno;
+        document.getElementById('planilla-id').value = r.id;
+        document.getElementById('fecha').value = r.fecha;
+        document.getElementById('turno').value = r.turno;
         
         poblarComboSectores();
-        document.getElementById('centro_trabajo').value = registro.centro_trabajo;
-        
-        document.getElementById('codigo').value = registro.codigo;
+        document.getElementById('centro_trabajo').value = r.centro_trabajo;
+        document.getElementById('codigo').value = r.codigo;
         buscarDescripcionYTeoricoAuto();
 
-        document.getElementById('horas_trabajadas').value = registro.horas_trabajadas;
-        document.getElementById('dotacion_teorica').value = registro.dotacion_teorica;
-        document.getElementById('dotacion_real').value = registro.dotacion_real;
+        document.getElementById('horas_trabajadas').value = r.horas_trabajadas;
+        document.getElementById('dotacion_teorica').value = r.dotacion_teorica;
+        document.getElementById('dotacion_real').value = r.dotacion_real;
 
-        document.getElementById('kg_cajas_reales').value = registro.kg_cajas_reales;
-        document.getElementById('peso_promedio_unid_kg').value = registro.peso_promedio_unid_kg;
-        document.getElementById('decomiso_kg').value = registro.decomiso_kg;
-        document.getElementById('reproceso_kg').value = registro.reproceso_kg;
-        document.getElementById('scrap_flex_kg').value = registro.scrap_flex_kg;
+        document.getElementById('kg_cajas_reales').value = r.kg_cajas_reales;
+        document.getElementById('peso_promedio_unid_kg').value = r.peso_promedio_unid_kg;
+        document.getElementById('decomiso_kg').value = r.decomiso_kg;
+        document.getElementById('reproceso_kg').value = r.reproceso_kg;
+        document.getElementById('scrap_flex_kg').value = r.scrap_flex_kg;
 
-        document.getElementById('modal-titulo').innerText = `Modificar Planilla #${registro.id} (${plantaActual.toUpperCase()})`;
+        // Detenciones
+        document.getElementById('detencion_produccion').value = r.detencion_produccion || 0;
+        document.getElementById('detencion_refrigerio').value = r.detencion_refrigerio || 0;
+        document.getElementById('detencion_mecanico').value = r.detencion_mecanico || 0;
+        document.getElementById('detencion_electrico').value = r.detencion_electrico || 0;
+        document.getElementById('detencion_calidad').value = r.detencion_calidad || 0;
+        document.getElementById('detencion_programacion').value = r.detencion_programacion || 0;
+        document.getElementById('detencion_limpieza').value = r.detencion_limpieza || 0;
+        document.getElementById('detencion_abastecimiento').value = r.detencion_abastecimiento || 0;
+        document.getElementById('detencion_desarrollo').value = r.detencion_desarrollo || 0;
+        document.getElementById('detencion_alistamiento').value = r.detencion_alistamiento || 0;
+        document.getElementById('detencion_rrhh').value = r.detencion_rrhh || 0;
+        document.getElementById('detencion_suministro').value = r.detencion_suministro || 0;
+
+        cambiarTabModal('sec-general');
+        document.getElementById('modal-titulo').innerText = `Modificar Planilla #${r.id} (${plantaActual.toUpperCase()})`;
         document.getElementById('modal-planilla').style.display = 'flex';
     }
 
@@ -400,8 +467,7 @@
         
         const idEdit = document.getElementById('planilla-id').value;
         const dotTeorica = parseFloat(document.getElementById('dotacion_teorica').value) || 0;
-        const dotRealInput = document.getElementById('dotacion_real').value;
-        const dotReal = dotRealInput !== "" ? parseFloat(dotRealInput) : dotTeorica;
+        const dotRealVal = document.getElementById('dotacion_real').value;
 
         const payload = {
             fecha: document.getElementById('fecha').value,
@@ -411,12 +477,26 @@
             codigo: document.getElementById('codigo').value.trim(),
             horas_trabajadas: parseFloat(document.getElementById('horas_trabajadas').value) || 0,
             dotacion_teorica: dotTeorica,
-            dotacion_real: dotReal,
+            dotacion_real: dotRealVal !== "" ? parseFloat(dotRealVal) : dotTeorica,
             kg_cajas_reales: parseFloat(document.getElementById('kg_cajas_reales').value) || 0,
             peso_promedio_unid_kg: parseFloat(document.getElementById('peso_promedio_unid_kg').value) || 0,
             decomiso_kg: parseFloat(document.getElementById('decomiso_kg').value) || 0,
             reproceso_kg: parseFloat(document.getElementById('reproceso_kg').value) || 0,
-            scrap_flex_kg: parseFloat(document.getElementById('scrap_flex_kg').value) || 0
+            scrap_flex_kg: parseFloat(document.getElementById('scrap_flex_kg').value) || 0,
+            
+            // 12 Campos de Detenciones en Minutos
+            detencion_produccion: parseFloat(document.getElementById('detencion_produccion').value) || 0,
+            detencion_refrigerio: parseFloat(document.getElementById('detencion_refrigerio').value) || 0,
+            detencion_mecanico: parseFloat(document.getElementById('detencion_mecanico').value) || 0,
+            detencion_electrico: parseFloat(document.getElementById('detencion_electrico').value) || 0,
+            detencion_calidad: parseFloat(document.getElementById('detencion_calidad').value) || 0,
+            detencion_programacion: parseFloat(document.getElementById('detencion_programacion').value) || 0,
+            detencion_limpieza: parseFloat(document.getElementById('detencion_limpieza').value) || 0,
+            detencion_abastecimiento: parseFloat(document.getElementById('detencion_abastecimiento').value) || 0,
+            detencion_desarrollo: parseFloat(document.getElementById('detencion_desarrollo').value) || 0,
+            detencion_alistamiento: parseFloat(document.getElementById('detencion_alistamiento').value) || 0,
+            detencion_rrhh: parseFloat(document.getElementById('detencion_rrhh').value) || 0,
+            detencion_suministro: parseFloat(document.getElementById('detencion_suministro').value) || 0
         };
 
         const esEdicion = Boolean(idEdit);
@@ -438,7 +518,7 @@
             }
         } catch (err) {
             console.error("Error al guardar planilla:", err);
-            alert("Error de conexión al intentar guardar.");
+            alert("Error de conexión al guardar.");
         }
     }
 
