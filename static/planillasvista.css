@@ -6,6 +6,21 @@
     margin-bottom: 20px;
 }
 
+/* Filtros de búsqueda */
+.filtros-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.filtros-bar input {
+    padding: 8px 12px;
+    font-size: 13px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+/* Pestañas / Solapas (Unificado) */
 .tabs-container {
     display: flex;
     gap: 8px;
@@ -61,7 +76,7 @@
 
 .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 15px;
     margin-bottom: 20px;
 }
@@ -136,6 +151,7 @@ tr:hover {
     background-color: #e2eafc !important;
 }
 
+/* Botones */
 .btn-sm {
     padding: 4px 8px;
     font-size: 12px;
@@ -144,6 +160,21 @@ tr:hover {
     cursor: pointer;
     background-color: #6c757d;
     color: #fff;
+}
+
+.btn-edit {
+    background-color: #ffc107;
+    color: #212529;
+    border: none;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-edit:hover {
+    background-color: #e0a800;
 }
 
 .btn-save {
@@ -162,62 +193,4 @@ tr:hover {
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
-}
-/* Pestañas / Solapas */
-.tabs-container {
-    display: flex;
-    gap: 5px;
-    margin-bottom: 15px;
-    border-bottom: 2px solid #ccc;
-}
-
-.tab-button {
-    padding: 10px 20px;
-    font-size: 14px;
-    font-weight: bold;
-    border: none;
-    background-color: #e0e0e0;
-    cursor: pointer;
-    border-radius: 5px 5px 0 0;
-    transition: background-color 0.2s;
-}
-
-.tab-button.active {
-    background-color: #0056b3;
-    color: white;
-    border-bottom: 2px solid #0056b3;
-}
-
-/* Grilla del Modal y Secciones */
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.seccion-titulo {
-    grid-column: 1 / -1;
-    font-weight: bold;
-    font-size: 15px;
-    margin-top: 10px;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 4px;
-    color: #333;
-}
-
-/* Botón de Modificar en la tabla */
-.btn-edit {
-    background-color: #ffc107;
-    color: #212529;
-    border: none;
-    padding: 4px 8px;
-    font-size: 12px;
-    font-weight: bold;
-    border-radius: 3px;
-    cursor: pointer;
-}
-
-.btn-edit:hover {
-    background-color: #e0a800;
 }
