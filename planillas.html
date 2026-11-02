@@ -114,84 +114,115 @@
                         </div>
                     </div>
 
-                    <!-- SECCIÓN 2: MERMAS Y PESOS -->
-                    <div class="seccion-titulo">2. Producción y Mermas</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Kg / Cajas Reales</label>
-                            <input type="number" step="0.01" id="kg_cajas_reales" required>
+                                        <!-- 2. PRODUCCIÓN Y MERMAS -->
+                        <div class="seccion-titulo">2. Producción y Mermas</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Kg / Cajas Reales</label>
+                                <input type="number" step="0.01" id="kg_cajas_reales" required oninput="calcularKPIsEnTiempoReal()">
+                            </div>
+                            <div class="form-group">
+                                <label>Peso Promedio Unid (kg)</label>
+                                <input type="number" step="0.0001" id="peso_promedio_unid_kg" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Decomiso (kg)</label>
+                                <input type="number" step="0.01" id="decomiso_kg" value="0" oninput="calcularKPIsEnTiempoReal()">
+                            </div>
+                            <div class="form-group">
+                                <label>Reproceso (kg)</label>
+                                <input type="number" step="0.01" id="reproceso_kg" value="0" oninput="calcularKPIsEnTiempoReal()">
+                            </div>
+                            <div class="form-group">
+                                <label>Scrap Flex (kg)</label>
+                                <input type="number" step="0.01" id="scrap_flex_kg" value="0" oninput="calcularKPIsEnTiempoReal()">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Peso Promedio Unid (kg)</label>
-                            <input type="number" step="0.0001" id="peso_promedio_unid_kg" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Decomiso (kg)</label>
-                            <input type="number" step="0.01" id="decomiso_kg" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Reproceso (kg)</label>
-                            <input type="number" step="0.01" id="reproceso_kg" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Scrap Flex (kg)</label>
-                            <input type="number" step="0.01" id="scrap_flex_kg" value="0">
-                        </div>
-                    </div>
 
-                    <!-- SECCIÓN 3: DETENCIONES (EN MINUTOS) -->
-                    <div class="seccion-titulo">3. Detenciones (Minutos)</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Producción (min)</label>
-                            <input type="number" step="1" id="detencion_produccion" value="0">
+                        <!-- Indicadores calculados para el supervisor -->
+                        <div class="form-grid" style="background-color: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                            <div class="form-group">
+                                <label style="color: #0056b3; font-weight: bold;">Eficiencia Real %</label>
+                                <input type="text" id="kpi_efic_real" readonly class="input-auto" value="0.0%" style="font-weight: bold; color: #166534;">
+                            </div>
+                            <div class="form-group">
+                                <label style="color: #0056b3; font-weight: bold;">Decomiso %</label>
+                                <input type="text" id="kpi_decomiso_pct" readonly class="input-auto" value="0.00%">
+                            </div>
+                            <div class="form-group">
+                                <label style="color: #0056b3; font-weight: bold;">Reproceso %</label>
+                                <input type="text" id="kpi_reproceso_pct" readonly class="input-auto" value="0.00%">
+                            </div>
+                            <div class="form-group">
+                                <label style="color: #0056b3; font-weight: bold;">Scrap Flex %</label>
+                                <input type="text" id="kpi_scrap_pct" readonly class="input-auto" value="0.00%">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Refrigerio (min)</label>
-                            <input type="number" step="1" id="detencion_refrigerio" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Mecánico (min)</label>
-                            <input type="number" step="1" id="detencion_mecanico" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Eléctrico (min)</label>
-                            <input type="number" step="1" id="detencion_electrico" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Calidad (min)</label>
-                            <input type="number" step="1" id="detencion_calidad" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Programación (min)</label>
-                            <input type="number" step="1" id="detencion_programacion" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Limpieza (min)</label>
-                            <input type="number" step="1" id="detencion_limpieza" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Abastecimiento (min)</label>
-                            <input type="number" step="1" id="detencion_abastecimiento" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Desarrollo (min)</label>
-                            <input type="number" step="1" id="detencion_desarrollo" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Alistamiento (min)</label>
-                            <input type="number" step="1" id="detencion_alistamiento" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>RRHH (min)</label>
-                            <input type="number" step="1" id="detencion_rrhh" value="0">
-                        </div>
-                        <div class="form-group">
-                            <label>Suministro (min)</label>
-                            <input type="number" step="1" id="detencion_suministro" value="0">
-                        </div>
-                    </div>
-                </div>
+
+                                                <!-- 3. DETENCIONES (MINUTOS Y DETALLE) -->
+                            <div class="seccion-titulo">3. Detenciones (Minutos y Observaciones)</div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Producción (min)</label>
+                                    <input type="number" step="1" id="detencion_produccion" value="0">
+                                    <input type="text" id="obs_detencion_produccion" placeholder="Observación..." class="input-obs">
+                                </div>
+                                <div class="form-group">
+                                    <label>Refrigerio (min)</label>
+                                    <input type="number" step="1" id="detencion_refrigerio" value="0">
+                                    <input type="text" id="obs_detencion_refrigerio" placeholder="Observación..." class="input-obs">
+                                </div>
+                                <div class="form-group">
+                                    <label>Mecánico (min)</label>
+                                    <input type="number" step="1" id="detencion_mecanico" value="0">
+                                    <input type="text" id="obs_detencion_mecanico" placeholder="Observación causa..." class="input-obs">
+                                </div>
+                                <div class="form-group">
+                                    <label>Eléctrico (min)</label>
+                                    <input type="number" step="1" id="detencion_electrico" value="0">
+                                    <input type="text" id="obs_detencion_electrico" placeholder="Observación causa..." class="input-obs">
+                                </div>
+                                <div class="form-group">
+                                    <label>Calidad (min)</label>
+                                    <input type="number" step="1" id="detencion_calidad" value="0">
+                                    <input type="text" id="obs_detencion_calidad" placeholder="Observación..." class="input-obs">
+                                </div>
+                                <div class="form-group">
+                                    <label>Programación (min)</label>
+                                    <input type="number" step="1" id="detencion_programacion" value="0">
+                                    <input type="text" id="obs_detencion_programacion" placeholder="Observación..." class="input-obs">
+                                </div>
+                                <div class="form-group">
+                                    <label>Limpieza (min)</label>
+                                    <input type="number" step="1" id="detencion_limpieza" value="0">
+                                    <input type="text" id="obs_detencion_limpieza" placeholder="Observación..." class="input-obs">
+                                </div>
+                                <div class="form-group">
+                                    <label>Abastecimiento (min)</label>
+                                    <input type="number" step="1" id="detencion_abastecimiento" value="0">
+                                    <input type="text" id="obs_detencion_abastecimiento" placeholder="Observación..." class="input-obs">
+                                </div>
+                                <div class="form-group">
+                                    <label>Desarrollo (min)</label>
+                                    <input type="number" step="1" id="detencion_desarrollo" value="0">
+                                    <input type="text" id="obs_detencion_desarrollo" placeholder="Observación..." class="input-obs">
+                                </div>
+                                <div class="form-group">
+                                    <label>Alistamiento (min)</label>
+                                    <input type="number" step="1" id="detencion_alistamiento" value="0">
+                                    <input type="text" id="obs_detencion_alistamiento" placeholder="Observación..." class="input-obs">
+                                </div>
+                                <div class="form-group">
+                                    <label>RRHH (min)</label>
+                                    <input type="number" step="1" id="detencion_rrhh" value="0">
+                                    <input type="text" id="obs_detencion_rrhh" placeholder="Observación..." class="input-obs">
+                                </div>
+                                <div class="form-group">
+                                    <label>Suministro (min)</label>
+                                    <input type="number" step="1" id="detencion_suministro" value="0">
+                                    <input type="text" id="obs_detencion_suministro" placeholder="Observación..." class="input-obs">
+                                </div>
+                            </div>
 
                 <div class="modal-buttons">
                     <button type="button" class="btn-cancel" onclick="cerrarFormulario()">Cancelar</button>
@@ -314,6 +345,40 @@
         };
     }
 
+    function calcularKPIsEnTiempoReal() {
+        const hsTrab = parseFloat(document.getElementById('horas_trabajadas').value) || 0;
+        const kgReales = parseFloat(document.getElementById('kg_cajas_reales').value) || 0;
+        const decomisoKg = parseFloat(document.getElementById('decomiso_kg').value) || 0;
+        const reprocesoKg = parseFloat(document.getElementById('reproceso_kg').value) || 0;
+        const scrapKg = parseFloat(document.getElementById('scrap_flex_kg').value) || 0;
+        const codigo = document.getElementById('codigo').value.trim();
+
+        const teorico = listaTeoricosGlobal.find(t => String(t.codigo).trim() === String(codigo).trim());
+        
+        let kgTeorico = 0;
+        if (teorico) {
+            const peso = parseFloat(teorico.peso) || 0;
+            const uxb = parseFloat(teorico.uxb) || 0;
+            const bultosHora = parseFloat(teorico.bultos_hora) || 0;
+            kgTeorico = uxb * peso * bultosHora * hsTrab;
+        }
+
+        const eficRealPct = kgTeorico > 0 ? ((kgReales / kgTeorico) * 100) : 0;
+        const decomisoPct = kgReales > 0 ? ((decomisoKg / kgReales) * 100) : 0;
+        const reprocesoPct = kgReales > 0 ? ((reprocesoKg / kgReales) * 100) : 0;
+        const scrapPct = kgReales > 0 ? ((scrapKg / kgReales) * 100) : 0;
+
+        const elEfic = document.getElementById('kpi_efic_real');
+        const elDecomiso = document.getElementById('kpi_decomiso_pct');
+        const elReproceso = document.getElementById('kpi_reproceso_pct');
+        const elScrap = document.getElementById('kpi_scrap_pct');
+
+        if (elEfic) elEfic.value = `${eficRealPct.toFixed(1)}%`;
+        if (elDecomiso) elDecomiso.value = `${decomisoPct.toFixed(2)}%`;
+        if (elReproceso) elReproceso.value = `${reprocesoPct.toFixed(2)}%`;
+        if (elScrap) elScrap.value = `${scrapPct.toFixed(2)}%`;
+    }
+
     function renderizarTabla() {
         const tbody = document.getElementById('tbody-planillas');
         if (!tbody) return;
@@ -376,6 +441,7 @@
         if (!codInput) {
             inputDesc.value = '';
             inputDotacion.value = 0;
+            calcularKPIsEnTiempoReal();
             return;
         }
 
@@ -390,6 +456,8 @@
             inputDesc.value = '⚠️ Código no encontrado';
             inputDotacion.value = 0;
         }
+
+        calcularKPIsEnTiempoReal();
     }
 
     async function abrirFormulario() {
@@ -405,6 +473,7 @@
         }
         
         poblarComboSectores();
+        calcularKPIsEnTiempoReal();
         
         document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
         
@@ -441,7 +510,7 @@
         document.getElementById('reproceso_kg').value = r.reproceso_kg;
         document.getElementById('scrap_flex_kg').value = r.scrap_flex_kg;
 
-        // Detenciones
+        // Detenciones y Observaciones
         document.getElementById('detencion_produccion').value = r.detencion_produccion || 0;
         document.getElementById('detencion_refrigerio').value = r.detencion_refrigerio || 0;
         document.getElementById('detencion_mecanico').value = r.detencion_mecanico || 0;
@@ -454,6 +523,44 @@
         document.getElementById('detencion_alistamiento').value = r.detencion_alistamiento || 0;
         document.getElementById('detencion_rrhh').value = r.detencion_rrhh || 0;
         document.getElementById('detencion_suministro').value = r.detencion_suministro || 0;
+
+        const elObsProd = document.getElementById('obs_detencion_produccion');
+        if (elObsProd) elObsProd.value = r.obs_detencion_produccion || '';
+
+        const elObsRef = document.getElementById('obs_detencion_refrigerio');
+        if (elObsRef) elObsRef.value = r.obs_detencion_refrigerio || '';
+
+        const elObsMec = document.getElementById('obs_detencion_mecanico');
+        if (elObsMec) elObsMec.value = r.obs_detencion_mecanico || '';
+
+        const elObsElec = document.getElementById('obs_detencion_electrico');
+        if (elObsElec) elObsElec.value = r.obs_detencion_electrico || '';
+
+        const elObsCal = document.getElementById('obs_detencion_calidad');
+        if (elObsCal) elObsCal.value = r.obs_detencion_calidad || '';
+
+        const elObsProg = document.getElementById('obs_detencion_programacion');
+        if (elObsProg) elObsProg.value = r.obs_detencion_programacion || '';
+
+        const elObsLimp = document.getElementById('obs_detencion_limpieza');
+        if (elObsLimp) elObsLimp.value = r.obs_detencion_limpieza || '';
+
+        const elObsAbast = document.getElementById('obs_detencion_abastecimiento');
+        if (elObsAbast) elObsAbast.value = r.obs_detencion_abastecimiento || '';
+
+        const elObsDes = document.getElementById('obs_detencion_desarrollo');
+        if (elObsDes) elObsDes.value = r.obs_detencion_desarrollo || '';
+
+        const elObsAlist = document.getElementById('obs_detencion_alistamiento');
+        if (elObsAlist) elObsAlist.value = r.obs_detencion_alistamiento || '';
+
+        const elObsRrhh = document.getElementById('obs_detencion_rrhh');
+        if (elObsRrhh) elObsRrhh.value = r.obs_detencion_rrhh || '';
+
+        const elObsSum = document.getElementById('obs_detencion_suministro');
+        if (elObsSum) elObsSum.value = r.obs_detencion_suministro || '';
+
+        calcularKPIsEnTiempoReal();
 
         document.getElementById('modal-titulo').innerText = `Modificar Planilla #${r.id} (${plantaActual.toUpperCase()})`;
         
@@ -503,7 +610,20 @@
             detencion_desarrollo: parseFloat(document.getElementById('detencion_desarrollo').value) || 0,
             detencion_alistamiento: parseFloat(document.getElementById('detencion_alistamiento').value) || 0,
             detencion_rrhh: parseFloat(document.getElementById('detencion_rrhh').value) || 0,
-            detencion_suministro: parseFloat(document.getElementById('detencion_suministro').value) || 0
+            detencion_suministro: parseFloat(document.getElementById('detencion_suministro').value) || 0,
+
+            obs_detencion_produccion: document.getElementById('obs_detencion_produccion')?.value || '',
+            obs_detencion_refrigerio: document.getElementById('obs_detencion_refrigerio')?.value || '',
+            obs_detencion_mecanico: document.getElementById('obs_detencion_mecanico')?.value || '',
+            obs_detencion_electrico: document.getElementById('obs_detencion_electrico')?.value || '',
+            obs_detencion_calidad: document.getElementById('obs_detencion_calidad')?.value || '',
+            obs_detencion_programacion: document.getElementById('obs_detencion_programacion')?.value || '',
+            obs_detencion_limpieza: document.getElementById('obs_detencion_limpieza')?.value || '',
+            obs_detencion_abastecimiento: document.getElementById('obs_detencion_abastecimiento')?.value || '',
+            obs_detencion_desarrollo: document.getElementById('obs_detencion_desarrollo')?.value || '',
+            obs_detencion_alistamiento: document.getElementById('obs_detencion_alistamiento')?.value || '',
+            obs_detencion_rrhh: document.getElementById('obs_detencion_rrhh')?.value || '',
+            obs_detencion_suministro: document.getElementById('obs_detencion_suministro')?.value || ''
         };
 
         const esEdicion = Boolean(idEdit);
