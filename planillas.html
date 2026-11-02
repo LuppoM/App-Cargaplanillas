@@ -748,6 +748,39 @@
             }
         });
     }
+    const mapaTalleres = {
+    'mecanico': '1',
+    'electrico': '2',
+    'produccion': '3',
+    'programacion': '4',
+    'calidad': '5',
+    'limpieza': '6',
+    'desarrollo': '7',
+    'abastecimiento': '8',
+    'alistamiento': '10',
+    'rrhh': '11',
+    'suministro': '12',
+    'refrigerio': '13'
+};
+
+function obtenerArrayDetenciones() {
+    const detenciones = [];
+
+    Object.entries(mapaTalleres).forEach(([tipo, tallerId]) => {
+        const min = parseFloat(document.getElementById(`detencion_${tipo}`)?.value) || 0;
+        const obs = document.getElementById(`obs_detencion_${tipo}`)?.value.trim() || '';
+
+        if (min > 0) {
+            detenciones.push({
+                taller: tallerId, // Se envía "1", "2", etc.
+                descripcion: obs,
+                horas: parseFloat((min / 60).toFixed(4)) // Conversión de minutos a horas en decimal
+            });
+        }
+    });
+
+    return detenciones;
+}
 </script>
 </body>
 </html>
