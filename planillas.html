@@ -159,118 +159,93 @@
                             </div>
                         </div>
 
-                                                        <!-- 3. DETENCIONES (MINUTOS Y DETALLE) -->
+                <!-- 3. DETENCIONES (MINUTOS, % Y OBSERVACIONES) -->
         <div class="seccion-titulo">3. Detenciones (Minutos, % Incidencia y Observaciones)</div>
         <div class="form-grid">
             <div class="form-group">
-                <label>Producción (min / %)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" step="1" id="detencion_produccion" value="0">
-                    <input type="text" id="pct_detencion_produccion" value="0.00%" readonly class="input-readonly" style="width: 80px; text-align: center;">
-                </div>
+                <label>Producción</label>
+                <input type="number" step="1" id="detencion_produccion" value="0" placeholder="Minutos">
+                <input type="text" id="pct_detencion_produccion" value="0.00%" readonly class="input-readonly" style="text-align: center;">
                 <input type="text" id="obs_detencion_produccion" placeholder="Observación..." class="input-obs">
             </div>
 
             <div class="form-group">
-                <label>Refrigerio (min / %)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" step="1" id="detencion_refrigerio" value="0">
-                    <input type="text" id="pct_detencion_refrigerio" value="0.00%" readonly class="input-readonly" style="width: 80px; text-align: center;">
-                </div>
+                <label>Refrigerio</label>
+                <input type="number" step="1" id="detencion_refrigerio" value="0" placeholder="Minutos">
+                <input type="text" id="pct_detencion_refrigerio" value="0.00%" readonly class="input-readonly" style="text-align: center;">
                 <input type="text" id="obs_detencion_refrigerio" placeholder="Observación..." class="input-obs">
             </div>
 
             <div class="form-group">
-                <label>Mecánico (min / %)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" step="1" id="detencion_mecanico" value="0">
-                    <input type="text" id="pct_detencion_mecanico" value="0.00%" readonly class="input-readonly" style="width: 80px; text-align: center;">
-                </div>
+                <label>Mecánico</label>
+                <input type="number" step="1" id="detencion_mecanico" value="0" placeholder="Minutos">
+                <input type="text" id="pct_detencion_mecanico" value="0.00%" readonly class="input-readonly" style="text-align: center;">
                 <input type="text" id="obs_detencion_mecanico" placeholder="Observación causa..." class="input-obs">
             </div>
 
             <div class="form-group">
-                <label>Eléctrico (min / %)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" step="1" id="detencion_electrico" value="0">
-                    <input type="text" id="pct_detencion_electrico" value="0.00%" readonly class="input-readonly" style="width: 80px; text-align: center;">
-                </div>
+                <label>Eléctrico</label>
+                <input type="number" step="1" id="detencion_electrico" value="0" placeholder="Minutos">
+                <input type="text" id="pct_detencion_electrico" value="0.00%" readonly class="input-readonly" style="text-align: center;">
                 <input type="text" id="obs_detencion_electrico" placeholder="Observación causa..." class="input-obs">
             </div>
 
             <div class="form-group">
-                <label>Calidad (min / %)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" step="1" id="detencion_calidad" value="0">
-                    <input type="text" id="pct_detencion_calidad" value="0.00%" readonly class="input-readonly" style="width: 80px; text-align: center;">
-                </div>
+                <label>Calidad</label>
+                <input type="number" step="1" id="detencion_calidad" value="0" placeholder="Minutos">
+                <input type="text" id="pct_detencion_calidad" value="0.00%" readonly class="input-readonly" style="text-align: center;">
                 <input type="text" id="obs_detencion_calidad" placeholder="Observación..." class="input-obs">
             </div>
 
             <div class="form-group">
-                <label>Programación (min / %)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" step="1" id="detencion_programacion" value="0">
-                    <input type="text" id="pct_detencion_programacion" value="0.00%" readonly class="input-readonly" style="width: 80px; text-align: center;">
-                </div>
+                <label>Programación</label>
+                <input type="number" step="1" id="detencion_programacion" value="0" placeholder="Minutos">
+                <input type="text" id="pct_detencion_programacion" value="0.00%" readonly class="input-readonly" style="text-align: center;">
                 <input type="text" id="obs_detencion_programacion" placeholder="Observación..." class="input-obs">
             </div>
 
             <div class="form-group">
-                <label>Limpieza (min / %)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" step="1" id="detencion_limpieza" value="0">
-                    <input type="text" id="pct_detencion_limpieza" value="0.00%" readonly class="input-readonly" style="width: 80px; text-align: center;">
-                </div>
+                <label>Limpieza</label>
+                <input type="number" step="1" id="detencion_limpieza" value="0" placeholder="Minutos">
+                <input type="text" id="pct_detencion_limpieza" value="0.00%" readonly class="input-readonly" style="text-align: center;">
                 <input type="text" id="obs_detencion_limpieza" placeholder="Observación..." class="input-obs">
             </div>
 
             <div class="form-group">
-                <label>Abastecimiento (min / %)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" step="1" id="detencion_abastecimiento" value="0">
-                    <input type="text" id="pct_detencion_abastecimiento" value="0.00%" readonly class="input-readonly" style="width: 80px; text-align: center;">
-                </div>
+                <label>Abastecimiento</label>
+                <input type="number" step="1" id="detencion_abastecimiento" value="0" placeholder="Minutos">
+                <input type="text" id="pct_detencion_abastecimiento" value="0.00%" readonly class="input-readonly" style="text-align: center;">
                 <input type="text" id="obs_detencion_abastecimiento" placeholder="Observación..." class="input-obs">
             </div>
 
             <div class="form-group">
-                <label>Desarrollo (min / %)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" step="1" id="detencion_desarrollo" value="0">
-                    <input type="text" id="pct_detencion_desarrollo" value="0.00%" readonly class="input-readonly" style="width: 80px; text-align: center;">
-                </div>
+                <label>Desarrollo</label>
+                <input type="number" step="1" id="detencion_desarrollo" value="0" placeholder="Minutos">
+                <input type="text" id="pct_detencion_desarrollo" value="0.00%" readonly class="input-readonly" style="text-align: center;">
                 <input type="text" id="obs_detencion_desarrollo" placeholder="Observación..." class="input-obs">
             </div>
 
             <div class="form-group">
-                <label>Alistamiento (min / %)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" step="1" id="detencion_alistamiento" value="0">
-                    <input type="text" id="pct_detencion_alistamiento" value="0.00%" readonly class="input-readonly" style="width: 80px; text-align: center;">
-                </div>
+                <label>Alistamiento</label>
+                <input type="number" step="1" id="detencion_alistamiento" value="0" placeholder="Minutos">
+                <input type="text" id="pct_detencion_alistamiento" value="0.00%" readonly class="input-readonly" style="text-align: center;">
                 <input type="text" id="obs_detencion_alistamiento" placeholder="Observación..." class="input-obs">
             </div>
 
             <div class="form-group">
-                <label>RRHH (min / %)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" step="1" id="detencion_rrhh" value="0">
-                    <input type="text" id="pct_detencion_rrhh" value="0.00%" readonly class="input-readonly" style="width: 80px; text-align: center;">
-                </div>
+                <label>RRHH</label>
+                <input type="number" step="1" id="detencion_rrhh" value="0" placeholder="Minutos">
+                <input type="text" id="pct_detencion_rrhh" value="0.00%" readonly class="input-readonly" style="text-align: center;">
                 <input type="text" id="obs_detencion_rrhh" placeholder="Observación..." class="input-obs">
             </div>
 
             <div class="form-group">
-                <label>Suministro (min / %)</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="number" step="1" id="detencion_suministro" value="0">
-                    <input type="text" id="pct_detencion_suministro" value="0.00%" readonly class="input-readonly" style="width: 80px; text-align: center;">
-                </div>
+                <label>Suministro</label>
+                <input type="number" step="1" id="detencion_suministro" value="0" placeholder="Minutos">
+                <input type="text" id="pct_detencion_suministro" value="0.00%" readonly class="input-readonly" style="text-align: center;">
                 <input type="text" id="obs_detencion_suministro" placeholder="Observación..." class="input-obs">
             </div>
         </div>
-
                 <div class="modal-buttons">
                     <button type="button" class="btn-cancel" onclick="cerrarFormulario()">Cancelar</button>
                     <button type="submit" class="btn-save">Guardar Registro</button>
