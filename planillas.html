@@ -92,7 +92,6 @@
                             </select>
                         </div>
                         <div class="form-group">
-                        <div class="form-group">
                             <label>Centro de Trabajo (Sector)</label>
                             <input type="text" id="centro_trabajo" placeholder="Ej: Moldeo, Envasado..." required>
                         </div>
@@ -284,7 +283,6 @@
         const decomisoPct = kgReales > 0 ? ((decomisoKg / kgReales) * 100) : 0;
         const scrapPct = kgReales > 0 ? ((scrapKg / kgReales) * 100) : 0;
 
-        // Suma de detenciones expresadas en minutos a horas
         const ttDetencionesMin = (parseFloat(item.detencion_produccion) || 0) +
                                  (parseFloat(item.detencion_refrigerio) || 0) +
                                  (parseFloat(item.detencion_mecanico) || 0) +
@@ -364,22 +362,6 @@
         modificarPlanilla(idSeleccionado);
     }
 
-    function poblarComboSectores() {
-        const selectSec = document.getElementById('centro_trabajo');
-        selectSec.innerHTML = '<option value="">Seleccione sector...</option>';
-
-        const sectoresFiltrados = listaSectoresGlobal.filter(s => 
-            String(s.planta).toLowerCase().trim() === plantaActual && (s.activo === undefined || s.activo === true)
-        );
-
-        sectoresFiltrados.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s.nombre;
-            opt.textContent = s.nombre;
-            selectSec.appendChild(opt);
-        });
-    }
-
     function buscarDescripcionYTeoricoAuto() {
         const codInput = document.getElementById('codigo').value.trim();
         const inputDesc = document.getElementById('descripcion_producto');
@@ -409,7 +391,6 @@
         document.getElementById('planilla-id').value = '';
         
         cambiarTabModal('sec-general');
-        poblarComboSectores();
         
         document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
         document.getElementById('modal-planilla').style.display = 'flex';
@@ -422,9 +403,7 @@
         document.getElementById('planilla-id').value = r.id;
         document.getElementById('fecha').value = r.fecha;
         document.getElementById('turno').value = r.turno;
-        
-        poblarComboSectores();
-        document.getElementById('centro_trabajo').value = r.centro_trabajo;
+        document.getElementById('centro_trabajo').value = r.centro_trabajo || '';
         document.getElementById('codigo').value = r.codigo;
         buscarDescripcionYTeoricoAuto();
 
@@ -483,7 +462,6 @@
             reproceso_kg: parseFloat(document.getElementById('reproceso_kg').value) || 0,
             scrap_flex_kg: parseFloat(document.getElementById('scrap_flex_kg').value) || 0,
             
-            // 12 Campos de Detenciones en Minutos
             detencion_produccion: parseFloat(document.getElementById('detencion_produccion').value) || 0,
             detencion_refrigerio: parseFloat(document.getElementById('detencion_refrigerio').value) || 0,
             detencion_mecanico: parseFloat(document.getElementById('detencion_mecanico').value) || 0,
