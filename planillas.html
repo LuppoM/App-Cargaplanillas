@@ -62,7 +62,8 @@
     </div>
 
     <!-- Modal de Carga y Modificación en Pantalla Única -->
-    <div id="modal-planilla" class="modal">
+
+    <div id="modal-planilla" class="modal" style="display: none;">
         <div class="modal-content">
             <h3 id="modal-titulo">Cargar Planilla de Producción</h3>
 
@@ -207,8 +208,8 @@
     let listaTeoricosGlobal = [];
     let idSeleccionado = null;
 
-    document.addEventListener('DOMContentLoaded', () => {
-        cargarBaseDatosAuxiliares();
+    document.addEventListener('DOMContentLoaded', async () => {
+        await cargarBaseDatosAuxiliares();
         cargarPlanillas();
     });
 
@@ -372,16 +373,23 @@
         }
     }
 
-    function abrirFormulario() {
-        document.getElementById('form-planilla').reset();
-        document.getElementById('planilla-id').value = '';
-        
-        document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
-        document.getElementById('modal-planilla').style.display = 'flex';
-        
-        const bodyScroll = document.querySelector('.modal-body-scroll');
-        if (bodyScroll) bodyScroll.scrollTop = 0;
+    async function abrirFormulario() {
+    document.getElementById('form-planilla').reset();
+    document.getElementById('planilla-id').value = '';
+    
+    // Si aún no bajaron los sectores de la API, los vuelve a pedir
+    if (!listaSectoresGlobal || listaSectoresGlobal.length === 0) {
+        await cargarBaseDatosAuxiliares();
     }
+    
+    poblarComboSectores();
+    
+    document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
+    document.getElementById('modal-planilla').style.display = 'flex';
+    
+    const bodyScroll = document.querySelector('.modal-body-scroll');
+    if (bodyScroll) bodyScroll.scrollTop = 0;
+}
 
     function modificarPlanilla(id) {
         const r = datosGlobales.find(p => p.id === id);
@@ -508,21 +516,7 @@
             }
         });
     }
-    function poblarComboSectores() {
-    const selectSec = document.getElementById('centro_trabajo');
-    selectSec.innerHTML = '<option value="">Seleccione sector...</option>';
-
-    const sectoresFiltrados = listaSectoresGlobal.filter(s => 
-        String(s.planta).toLowerCase().trim() === plantaActual && (s.activo === undefined || s.activo === true)
-    );
-
-    sectoresFiltrados.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.nombre;
-        opt.textContent = s.nombre;
-        selectSec.appendChild(opt);
-    });
-}
+    
 </script>
 </body>
 </html>
