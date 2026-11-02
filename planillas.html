@@ -261,27 +261,37 @@
     let listaTeoricosGlobal = [];
     let idSeleccionado = null;
 
-    document.addEventListener('DOMContentLoaded', async () => {
+   document.addEventListener('DOMContentLoaded', async () => {
     await cargarBaseDatosAuxiliares();
     cargarPlanillas();
 
-    const camposKPI = [
-        'horas_trabajadas', 
-        'kg_cajas_reales', 
-        'decomiso_kg', 
-        'reproceso_kg', 
-        'scrap_flex_kg', 
-        'codigo', 
-        'centro_trabajo'
+    const tiposDetencion = [
+        'produccion', 'refrigerio', 'mecanico', 'electrico',
+        'calidad', 'programacion', 'limpieza', 'abastecimiento',
+        'desarrollo', 'alistamiento', 'rrhh', 'suministro'
     ];
 
-    camposKPI.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('input', calcularKPIsEnTiempoReal);
-            el.addEventListener('change', calcularKPIsEnTiempoReal);
+    // Listeners para los inputs de detenciones (escuchan cambios y minutos)
+    tiposDetencion.forEach(tipo => {
+        const inputMin = document.getElementById(`detencion_${tipo}`);
+        if (inputMin) {
+            inputMin.addEventListener('input', calcularIncidenciaDetenciones);
+            inputMin.addEventListener('change', calcularIncidenciaDetenciones);
         }
     });
+
+    // Si cambian las Horas Trabajadas, recalcular tanto KPIs como Detenciones
+    const elHoras = document.getElementById('horas_trabajadas');
+    if (elHoras) {
+        elHoras.addEventListener('input', () => {
+            calcularKPIsEnTiempoReal();
+            calcularIncidenciaDetenciones();
+        });
+        elHoras.addEventListener('change', () => {
+            calcularKPIsEnTiempoReal();
+            calcularIncidenciaDetenciones();
+        });
+    }
 });
 
     function cambiarSolapa(planta) {
@@ -717,26 +727,27 @@
         });
     }
     function calcularIncidenciaDetenciones() {
-    const hsTrab = parseFloat(document.getElementById('horas_trabajadas').value) || 0;
-    const totalMinutosTurno = hsTrab * 60;
+        // Tomar las horas trabajadas (ej: 8 hs = 480 min)
+        const hsTrab = parseFloat(document.getElementById('horas_trabajadas')?.value) || 0;
+        const totalMinutosTurno = hsTrab * 60;
 
-    const tiposDetencion = [
-        'produccion', 'refrigerio', 'mecanico', 'electrico',
-        'calidad', 'programacion', 'limpieza', 'abastecimiento',
-        'desarrollo', 'alistamiento', 'rrhh', 'suministro'
-    ];
+        const tiposDetencion = [
+            'produccion', 'refrigerio', 'mecanico', 'electrico',
+            'calidad', 'programacion', 'limpieza', 'abastecimiento',
+            'desarrollo', 'alistamiento', 'rrhh', 'suministro'
+        ];
 
-    tiposDetencion.forEach(tipo => {
-        const inputMin = document.getElementById(`detencion_${tipo}`);
-        const inputPct = document.getElementById(`pct_detencion_${tipo}`);
-        
-        if (inputMin && inputPct) {
-            const min = parseFloat(inputMin.value) || 0;
-            const pct = totalMinutosTurno > 0 ? ((min / totalMinutosTurno) * 100) : 0;
-            inputPct.value = `${pct.toFixed(2)}%`;
-        }
-    });
-}
+        tiposDetencion.forEach(tipo => {
+            const inputMin = document.getElementById(`detencion_${tipo}`);
+            const inputPct = document.getElementById(`pct_detencion_${tipo}`);
+            
+            if (inputMin && inputPct) {
+                const min = parseFloat(inputMin.value) || 0;
+                const pct = totalMinutosTurno > 0 ? ((min / totalMinutosTurno) * 100) : 0;
+                inputPct.value = `${pct.toFixed(2)}%`;
+            }
+        });
+    }
 </script>
 </body>
 </html>
