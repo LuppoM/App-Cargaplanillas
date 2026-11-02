@@ -237,6 +237,24 @@
         }
     }
 
+    function poblarComboSectores() {
+        const selectSec = document.getElementById('centro_trabajo');
+        if (!selectSec) return;
+        
+        selectSec.innerHTML = '<option value="">Seleccione sector...</option>';
+
+        const sectoresFiltrados = listaSectoresGlobal.filter(s => 
+            String(s.planta).toLowerCase().trim() === plantaActual && (s.activo === undefined || s.activo === true)
+        );
+
+        sectoresFiltrados.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.nombre;
+            opt.textContent = s.nombre;
+            selectSec.appendChild(opt);
+        });
+    }
+
     async function cargarPlanillas() {
         try {
             const res = await fetch('/api/planillas');
@@ -298,6 +316,7 @@
 
     function renderizarTabla() {
         const tbody = document.getElementById('tbody-planillas');
+        if (!tbody) return;
         tbody.innerHTML = '';
 
         const filtrados = datosGlobales.filter(p => 
@@ -374,22 +393,29 @@
     }
 
     async function abrirFormulario() {
-    document.getElementById('form-planilla').reset();
-    document.getElementById('planilla-id').value = '';
-    
-    // Si aún no bajaron los sectores de la API, los vuelve a pedir
-    if (!listaSectoresGlobal || listaSectoresGlobal.length === 0) {
-        await cargarBaseDatosAuxiliares();
+        document.getElementById('form-planilla').reset();
+        document.getElementById('planilla-id').value = '';
+        
+        try {
+            if (!listaSectoresGlobal || listaSectoresGlobal.length === 0) {
+                await cargarBaseDatosAuxiliares();
+            }
+        } catch (err) {
+            console.error("No se pudieron cargar los sectores al abrir:", err);
+        }
+        
+        poblarComboSectores();
+        
+        document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
+        
+        const modal = document.getElementById('modal-planilla');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+        
+        const bodyScroll = document.querySelector('.modal-body-scroll');
+        if (bodyScroll) bodyScroll.scrollTop = 0;
     }
-    
-    poblarComboSectores();
-    
-    document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
-    document.getElementById('modal-planilla').style.display = 'flex';
-    
-    const bodyScroll = document.querySelector('.modal-body-scroll');
-    if (bodyScroll) bodyScroll.scrollTop = 0;
-}
 
     function modificarPlanilla(id) {
         const r = datosGlobales.find(p => p.id === id);
@@ -398,7 +424,10 @@
         document.getElementById('planilla-id').value = r.id;
         document.getElementById('fecha').value = r.fecha;
         document.getElementById('turno').value = r.turno;
+        
+        poblarComboSectores();
         document.getElementById('centro_trabajo').value = r.centro_trabajo || '';
+        
         document.getElementById('codigo').value = r.codigo;
         buscarDescripcionYTeoricoAuto();
 
@@ -427,7 +456,11 @@
         document.getElementById('detencion_suministro').value = r.detencion_suministro || 0;
 
         document.getElementById('modal-titulo').innerText = `Modificar Planilla #${r.id} (${plantaActual.toUpperCase()})`;
-        document.getElementById('modal-planilla').style.display = 'flex';
+        
+        const modal = document.getElementById('modal-planilla');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
         
         const bodyScroll = document.querySelector('.modal-body-scroll');
         if (bodyScroll) bodyScroll.scrollTop = 0;
@@ -516,7 +549,6 @@
             }
         });
     }
-    
 </script>
 </body>
 </html>
