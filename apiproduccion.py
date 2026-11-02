@@ -252,7 +252,9 @@ def obtener_planilla(planilla_id: int):
 @app.post("/api/planillas")
 def crear_planilla(payload: PlanillaSchema):
     try:
-        nuevo_id = planillasmodelo.insertar_planilla(payload.dict())
+        # Pydantic v2 usa model_dump(), mantengo dict() con fallback por compatibilidad
+        datos_dict = payload.model_dump() if hasattr(payload, 'model_dump') else payload.dict()
+        nuevo_id = planillasmodelo.insertar_planilla(datos_dict)
         return {"ok": True, "id": nuevo_id, "mensaje": "Planilla registrada correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al guardar la planilla: {str(e)}")
@@ -264,7 +266,8 @@ def modificar_planilla(planilla_id: int, payload: PlanillaSchema):
         raise HTTPException(status_code=404, detail="El registro a actualizar no existe")
     
     try:
-        planillasmodelo.actualizar_planilla(planilla_id, payload.dict())
+        datos_dict = payload.model_dump() if hasattr(payload, 'model_dump') else payload.dict()
+        planillasmodelo.actualizar_planilla(planilla_id, datos_dict)
         return {"ok": True, "mensaje": "Planilla actualizada correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al actualizar la planilla: {str(e)}")
