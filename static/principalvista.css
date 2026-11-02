@@ -123,3 +123,55 @@ body {
     margin-bottom: 12px;
     font-size: 24px;
 }
+/* Secciones y scroll modal */
+.modal-content {
+    max-width: 950px;
+    width: 90%;
+}
+
+.modal-body-scroll {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 12px;
+}
+
+.seccion-titulo {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #0056b3;
+    margin: 24px 0 12px 0;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.seccion-titulo:first-of-type {
+    margin-top: 5px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 15px;
+}
+
+.col-span-2 {
+    grid-column: span 2;
+}
+
+.input-auto-desc {
+    background-color: #f0f0f0;
+    font-weight: bold;
+    color: #0056b3;
+}
+
+.input-auto {
+    background-color: #f0f0f0;
+}
+
+.modal-buttons {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}

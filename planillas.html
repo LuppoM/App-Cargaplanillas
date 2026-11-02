@@ -61,23 +61,17 @@
         </table>
     </div>
 
-    <!-- Modal de Carga y Modificación Completo -->
-    <div id="modal-planilla" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 950px;">
+    <!-- Modal de Carga y Modificación en Pantalla Única -->
+    <div id="modal-planilla" class="modal">
+        <div class="modal-content">
             <h3 id="modal-titulo">Cargar Planilla de Producción</h3>
-            
-            <!-- Sub-navegación dentro del Modal -->
-            <div class="modal-tabs">
-                <button type="button" class="modal-tab-btn active" onclick="cambiarTabModal('sec-general')">1. Contexto y Tiempos</button>
-                <button type="button" class="modal-tab-btn" onclick="cambiarTabModal('sec-mermas')">2. Producción y Mermas</button>
-                <button type="button" class="modal-tab-btn" onclick="cambiarTabModal('sec-detenciones')">3. Detenciones (Minutos)</button>
-            </div>
 
             <form id="form-planilla" onsubmit="guardarPlanilla(event)">
                 <input type="hidden" id="planilla-id">
 
-                <!-- SECCIÓN 1: GENERAL -->
-                <div id="sec-general" class="modal-section active">
+                <div class="modal-body-scroll">
+                    <!-- SECCIÓN 1: GENERAL -->
+                    <div class="seccion-titulo">1. Contexto y Tiempos</div>
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Fecha</label>
@@ -99,9 +93,9 @@
                             <label>Código Producto</label>
                             <input type="text" id="codigo" placeholder="Ej: 10204" required oninput="buscarDescripcionYTeoricoAuto()">
                         </div>
-                        <div class="form-group" style="grid-column: span 2;">
+                        <div class="form-group col-span-2">
                             <label>Descripción Producto (Auto)</label>
-                            <input type="text" id="descripcion_producto" readonly placeholder="Sin coincidencia" style="background-color: #f0f0f0; font-weight: bold; color: #0056b3;">
+                            <input type="text" id="descripcion_producto" readonly placeholder="Sin coincidencia" class="input-auto-desc">
                         </div>
                         <div class="form-group">
                             <label>Horas Trabajadas</label>
@@ -109,17 +103,16 @@
                         </div>
                         <div class="form-group">
                             <label>Dotación Teórica (Auto)</label>
-                            <input type="number" step="0.01" id="dotacion_teorica" readonly style="background-color: #f0f0f0;">
+                            <input type="number" step="0.01" id="dotacion_teorica" readonly class="input-auto">
                         </div>
                         <div class="form-group">
                             <label>Dotación Real (Opcional)</label>
                             <input type="number" step="0.01" id="dotacion_real" placeholder="Toma teórica si omite">
                         </div>
                     </div>
-                </div>
 
-                <!-- SECCIÓN 2: MERMAS Y PESOS -->
-                <div id="sec-mermas" class="modal-section" style="display: none;">
+                    <!-- SECCIÓN 2: MERMAS Y PESOS -->
+                    <div class="seccion-titulo">2. Producción y Mermas</div>
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Kg / Cajas Reales</label>
@@ -142,10 +135,9 @@
                             <input type="number" step="0.01" id="scrap_flex_kg" value="0">
                         </div>
                     </div>
-                </div>
 
-                <!-- SECCIÓN 3: DETENCIONES (EN MINUTOS) -->
-                <div id="sec-detenciones" class="modal-section" style="display: none;">
+                    <!-- SECCIÓN 3: DETENCIONES (EN MINUTOS) -->
+                    <div class="seccion-titulo">3. Detenciones (Minutos)</div>
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Producción (min)</label>
@@ -198,7 +190,7 @@
                     </div>
                 </div>
 
-                <div class="modal-buttons" style="margin-top: 20px;">
+                <div class="modal-buttons">
                     <button type="button" class="btn-cancel" onclick="cerrarFormulario()">Cancelar</button>
                     <button type="submit" class="btn-save">Guardar Registro</button>
                 </div>
@@ -224,14 +216,6 @@
         document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
         if (event && event.target) event.target.classList.add('active');
         renderizarTabla();
-    }
-
-    function cambiarTabModal(tabId) {
-        document.querySelectorAll('.modal-tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.modal-section').forEach(sec => sec.style.display = 'none');
-
-        if (event && event.target) event.target.classList.add('active');
-        document.getElementById(tabId).style.display = 'block';
     }
 
     async function cargarBaseDatosAuxiliares() {
@@ -390,10 +374,11 @@
         document.getElementById('form-planilla').reset();
         document.getElementById('planilla-id').value = '';
         
-        cambiarTabModal('sec-general');
-        
         document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
         document.getElementById('modal-planilla').style.display = 'flex';
+        
+        const bodyScroll = document.querySelector('.modal-body-scroll');
+        if (bodyScroll) bodyScroll.scrollTop = 0;
     }
 
     function modificarPlanilla(id) {
@@ -431,9 +416,11 @@
         document.getElementById('detencion_rrhh').value = r.detencion_rrhh || 0;
         document.getElementById('detencion_suministro').value = r.detencion_suministro || 0;
 
-        cambiarTabModal('sec-general');
         document.getElementById('modal-titulo').innerText = `Modificar Planilla #${r.id} (${plantaActual.toUpperCase()})`;
         document.getElementById('modal-planilla').style.display = 'flex';
+        
+        const bodyScroll = document.querySelector('.modal-body-scroll');
+        if (bodyScroll) bodyScroll.scrollTop = 0;
     }
 
     function cerrarFormulario() {
