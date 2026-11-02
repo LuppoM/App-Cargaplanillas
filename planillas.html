@@ -240,9 +240,27 @@
     let idSeleccionado = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
-        await cargarBaseDatosAuxiliares();
-        cargarPlanillas();
+    await cargarBaseDatosAuxiliares();
+    cargarPlanillas();
+
+    const camposKPI = [
+        'horas_trabajadas', 
+        'kg_cajas_reales', 
+        'decomiso_kg', 
+        'reproceso_kg', 
+        'scrap_flex_kg', 
+        'codigo', 
+        'centro_trabajo'
+    ];
+
+    camposKPI.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', calcularKPIsEnTiempoReal);
+            el.addEventListener('change', calcularKPIsEnTiempoReal);
+        }
     });
+});
 
     function cambiarSolapa(planta) {
         plantaActual = planta;
@@ -345,15 +363,22 @@
         };
     }
 
-    function calcularKPIsEnTiempoReal() {
+        function calcularKPIsEnTiempoReal() {
         const hsTrab = parseFloat(document.getElementById('horas_trabajadas').value) || 0;
         const kgReales = parseFloat(document.getElementById('kg_cajas_reales').value) || 0;
         const decomisoKg = parseFloat(document.getElementById('decomiso_kg').value) || 0;
         const reprocesoKg = parseFloat(document.getElementById('reproceso_kg').value) || 0;
         const scrapKg = parseFloat(document.getElementById('scrap_flex_kg').value) || 0;
+        
+        // Capturar ambos valores del formulario
         const codigo = document.getElementById('codigo').value.trim();
+        const centroTrabajo = document.getElementById('centro_trabajo').value.trim(); // Ajustá el ID según tu HTML
 
-        const teorico = listaTeoricosGlobal.find(t => String(t.codigo).trim() === String(codigo).trim());
+        // Filtrar por CÓDIGO y CENTRO DE TRABAJO
+        const teorico = listaTeoricosGlobal.find(t => 
+            String(t.codigo).trim() === String(codigo).trim() &&
+            String(t.centro_trabajo).trim() === String(centroTrabajo).trim() // Asegurate que la propiedad en listaTeoricosGlobal se llame así
+        );
         
         let kgTeorico = 0;
         if (teorico) {
