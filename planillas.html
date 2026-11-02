@@ -261,7 +261,7 @@
     let listaTeoricosGlobal = [];
     let idSeleccionado = null;
 
-   document.addEventListener('DOMContentLoaded', async () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     await cargarBaseDatosAuxiliares();
     cargarPlanillas();
 
@@ -271,7 +271,7 @@
         'desarrollo', 'alistamiento', 'rrhh', 'suministro'
     ];
 
-    // Listeners para los inputs de detenciones (escuchan cambios y minutos)
+    // 1. Listeners para min de detenciones (% incidencia)
     tiposDetencion.forEach(tipo => {
         const inputMin = document.getElementById(`detencion_${tipo}`);
         if (inputMin) {
@@ -280,18 +280,30 @@
         }
     });
 
-    // Si cambian las Horas Trabajadas, recalcular tanto KPIs como Detenciones
-    const elHoras = document.getElementById('horas_trabajadas');
-    if (elHoras) {
-        elHoras.addEventListener('input', () => {
-            calcularKPIsEnTiempoReal();
-            calcularIncidenciaDetenciones();
-        });
-        elHoras.addEventListener('change', () => {
-            calcularKPIsEnTiempoReal();
-            calcularIncidenciaDetenciones();
-        });
-    }
+    // 2. Listeners para todos los campos que afectan los KPIs y Eficiencia
+    const camposKPI = [
+        'horas_trabajadas',
+        'kg_cajas_reales',
+        'decomiso_kg',
+        'reproceso_kg',
+        'scrap_flex_kg',
+        'codigo',
+        'centro_trabajo'
+    ];
+
+    camposKPI.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', () => {
+                calcularKPIsEnTiempoReal();
+                if (id === 'horas_trabajadas') calcularIncidenciaDetenciones();
+            });
+            el.addEventListener('change', () => {
+                calcularKPIsEnTiempoReal();
+                if (id === 'horas_trabajadas') calcularIncidenciaDetenciones();
+            });
+        }
+    });
 });
 
     function cambiarSolapa(planta) {
@@ -395,45 +407,52 @@
         };
     }
 
-        function calcularKPIsEnTiempoReal() {
-        const hsTrab = parseFloat(document.getElementById('horas_trabajadas').value) || 0;
-        const kgReales = parseFloat(document.getElementById('kg_cajas_reales').value) || 0;
-        const decomisoKg = parseFloat(document.getElementById('decomiso_kg').value) || 0;
-        const reprocesoKg = parseFloat(document.getElementById('reproceso_kg').value) || 0;
-        const scrapKg = parseFloat(document.getElementById('scrap_flex_kg').value) || 0;
-        
-        // Capturar ambos valores del formulario
-        const codigo = document.getElementById('codigo').value.trim();
-        const centroTrabajo = document.getElementById('centro_trabajo').value.trim(); // Ajustá el ID según tu HTML
+            function calcularKPIsEnTiempoReal() {
+        const horasTrabajadas = parseFloat(document.getElementById('horas_trabajadas')?.value) || 0;
+        const kgReales = parseFloat(document.getElementById('kg_cajas_reales')?.value) || 0;
+        const decomisoKg = parseFloat(document.getElementById('decomiso_kg')?.value) || 0;
+        const reprocesoKg = parseFloat(document.getElementById('reproceso_kg')?.value) || 0;
+        const scrapFlexKg = parseFloat(document.getElementById('scrap_flex_kg')?.value) || 0;
 
-        // Filtrar por CÓDIGO y CENTRO DE TRABAJO
-        const teorico = listaTeoricosGlobal.find(t => 
-            String(t.codigo).trim() === String(codigo).trim() &&
-            String(t.centro_trabajo).trim() === String(centroTrabajo).trim() // Asegurate que la propiedad en listaTeoricosGlobal se llame así
-        );
-        
-        let kgTeorico = 0;
-        if (teorico) {
-            const peso = parseFloat(teorico.peso) || 0;
-            const uxb = parseFloat(teorico.uxb) || 0;
-            const bultosHora = parseFloat(teorico.bultos_hora) || 0;
-            kgTeorico = uxb * peso * bultosHora * hsTrab;
+        const codigo = document.getElementById('codigo')?.value?.trim();
+        const centroTrabajo = document.getElementById('centro_trabajo')?.value?.trim();
+
+        // 1. Calcular mermas directas (no dependen del teórico)
+        const totalMermas = decomisoKg + reprocesoKg + scrapFlexKg;
+        const baseKg = kgReales + totalMermas;
+
+        if (document.getElementById('decomiso_pct')) {
+            document.getElementById('decomiso_pct').value = baseKg > 0 ? `${((decomisoKg / baseKg) * 100).toFixed(2)}%` : '0.00%';
+        }
+        if (document.getElementById('reproceso_pct')) {
+            document.getElementById('reproceso_pct').value = baseKg > 0 ? `${((reprocesoKg / baseKg) * 100).toFixed(2)}%` : '0.00%';
+        }
+        if (document.getElementById('scrap_flex_pct')) {
+            document.getElementById('scrap_flex_pct').value = baseKg > 0 ? `${((scrapFlexKg / baseKg) * 100).toFixed(2)}%` : '0.00%';
         }
 
-        const eficRealPct = kgTeorico > 0 ? ((kgReales / kgTeorico) * 100) : 0;
-        const decomisoPct = kgReales > 0 ? ((decomisoKg / kgReales) * 100) : 0;
-        const reprocesoPct = kgReales > 0 ? ((reprocesoKg / kgReales) * 100) : 0;
-        const scrapPct = kgReales > 0 ? ((scrapKg / kgReales) * 100) : 0;
+        // 2. Buscar teórico validando código Y centro de trabajo
+        const inputEficiencia = document.getElementById('eficiencia_real_pct');
+        if (!inputEficiencia) return;
 
-        const elEfic = document.getElementById('kpi_efic_real');
-        const elDecomiso = document.getElementById('kpi_decomiso_pct');
-        const elReproceso = document.getElementById('kpi_reproceso_pct');
-        const elScrap = document.getElementById('kpi_scrap_pct');
+        if (!codigo || !centroTrabajo || centroTrabajo === "" || centroTrabajo.startsWith("Seleccione")) {
+            inputEficiencia.value = '0.00%';
+            return;
+        }
 
-        if (elEfic) elEfic.value = `${eficRealPct.toFixed(1)}%`;
-        if (elDecomiso) elDecomiso.value = `${decomisoPct.toFixed(2)}%`;
-        if (elReproceso) elReproceso.value = `${reprocesoPct.toFixed(2)}%`;
-        if (elScrap) elScrap.value = `${scrapPct.toFixed(2)}%`;
+        const teorico = listaTeoricosGlobal.find(t => 
+            String(t.codigo).trim() === String(codigo).trim() && 
+            String(t.centro_trabajo).trim().toLowerCase() === String(centroTrabajo).trim().toLowerCase()
+        );
+
+        // 3. Calcular Eficiencia Real % = (Kg Reales / (Kg Teóricos por Hora * Horas Trabajadas)) * 100
+        if (teorico && teorico.kg_h_teoricos > 0 && horasTrabajadas > 0) {
+            const kgTeoricosTotales = teorico.kg_h_teoricos * horasTrabajadas;
+            const eficiencia = (kgReales / kgTeoricosTotales) * 100;
+            inputEficiencia.value = `${eficiencia.toFixed(2)}%`;
+        } else {
+            inputEficiencia.value = '0.00%';
+        }
     }
 
     function renderizarTabla() {
