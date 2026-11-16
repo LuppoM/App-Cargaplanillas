@@ -435,6 +435,41 @@
         if (elReproceso) elReproceso.value = `${reprocesoPct.toFixed(2)}%`;
         if (elScrap) elScrap.value = `${scrapPct.toFixed(2)}%`;
     }
+    function autocompletarContextoTurno() {
+    const ahora = new Date();
+    const minutosDelDia = ahora.getHours() * 60 + ahora.getMinutes();
+
+    let turno = "Mañana";
+    const fechaOperativa = new Date(ahora);
+
+    // 07:30 (450 min) a 15:29 (929 min) -> Mañana (hoy)
+    if (minutosDelDia >= 450 && minutosDelDia <= 929) {
+        turno = "Mañana";
+    }
+    // 15:30 (930 min) a 23:29 (1409 min) -> Tarde (hoy)
+    else if (minutosDelDia >= 930 && minutosDelDia <= 1409) {
+        turno = "Tarde";
+    }
+    // 23:30 a 23:59 -> Noche (hoy)
+    else if (minutosDelDia >= 1410) {
+        turno = "Noche";
+    }
+    // 00:00 a 07:29 (449 min) -> Noche (fecha de ayer)
+    else {
+        turno = "Noche";
+        fechaOperativa.setDate(fechaOperativa.getDate() - 1);
+    }
+
+    const yyyy = fechaOperativa.getFullYear();
+    const mm = String(fechaOperativa.getMonth() + 1).padStart(2, "0");
+    const dd = String(fechaOperativa.getDate()).padStart(2, "0");
+
+    const inputFecha = document.getElementById("fecha");
+    const selectTurno = document.getElementById("turno");
+
+    if (inputFecha) inputFecha.value = `${yyyy}-${mm}-${dd}`;
+    if (selectTurno) selectTurno.value = turno;
+}
 
     function renderizarTabla() {
         const tbody = document.getElementById('tbody-planillas');
@@ -510,7 +545,7 @@
             inputDesc.value = teoricoEncontrado.descripcion || 'Sin descripción';
             inputDotacion.value = teoricoEncontrado.dotacion || 0;
         } else {
-            inputDesc.value = '⚠️ Código no encontrado';
+            inputDesc.value = ' Código no encontrado';
             inputDotacion.value = 0;
         }
 
