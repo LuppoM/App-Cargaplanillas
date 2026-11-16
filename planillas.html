@@ -157,14 +157,14 @@
                                 <label style="color: #0056b3; font-weight: bold;">Scrap Flex %</label>
                                 <input type="text" id="kpi_scrap_pct" readonly class="input-auto" value="0.00%">
                             </div>
+                          <div>
+                                <label>Incidencia Total %</label>
+                                <input type="text" id="kpi_incidencia_pct" value="0.00%" readonly>
+                            </div>
                             <div>
-                            <label style="color: #0056b3; font-weight: bold; font-size: 0.85rem;">Incidencia Total %</label>
-                            <input type="text" id="incidencia_total_pct" value="0.00%" readonly class="form-control" style="background: #fff;">
-                        </div>
-                        <div>
-                            <label style="color: #0056b3; font-weight: bold; font-size: 0.85rem;">Rendimiento %</label>
-                            <input type="text" id="rendimiento_pct" value="0.0%" readonly class="form-control" style="background: #fff; font-weight: bold; color: #198754;">
-                        </div>
+                                <label>Rendimiento %</label>
+                                <input type="text" id="kpi_rendimiento_pct" value="0.0%" readonly>
+                            </div>
                         </div>
 
                 <!-- 3. DETENCIONES (MINUTOS, % Y OBSERVACIONES) -->
@@ -274,6 +274,7 @@
     await cargarBaseDatosAuxiliares();
     cargarPlanillas();
     autocompletarContextoTurno();
+    
 
     const tiposDetencion = [
         'produccion', 'refrigerio', 'mecanico', 'electrico',
@@ -287,6 +288,7 @@
         if (inputMin) {
             inputMin.addEventListener('input', calcularIncidenciaDetenciones);
             inputMin.addEventListener('change', calcularIncidenciaDetenciones);
+            
         }
     });
 
@@ -406,45 +408,64 @@
     }
 
         function calcularKPIsEnTiempoReal() {
-        const hsTrab = parseFloat(document.getElementById('horas_trabajadas').value) || 0;
-        const kgReales = parseFloat(document.getElementById('kg_cajas_reales').value) || 0;
-        const decomisoKg = parseFloat(document.getElementById('decomiso_kg').value) || 0;
-        const reprocesoKg = parseFloat(document.getElementById('reproceso_kg').value) || 0;
-        const scrapKg = parseFloat(document.getElementById('scrap_flex_kg').value) || 0;
-        
-        // Capturar ambos valores del formulario
-        const codigo = document.getElementById('codigo').value.trim();
-        const centroTrabajo = document.getElementById('centro_trabajo').value.trim(); // Ajustá el ID según tu HTML
+    const hsTrab = parseFloat(document.getElementById('horas_trabajadas').value) || 0;
+    const kgReales = parseFloat(document.getElementById('kg_cajas_reales').value) || 0;
+    const decomisoKg = parseFloat(document.getElementById('decomiso_kg').value) || 0;
+    const reprocesoKg = parseFloat(document.getElementById('reproceso_kg').value) || 0;
+    const scrapKg = parseFloat(document.getElementById('scrap_flex_kg').value) || 0;
+    
+    const codigo = document.getElementById('codigo').value.trim();
+    const centroTrabajo = document.getElementById('centro_trabajo').value.trim();
 
-        // Filtrar por CÓDIGO y CENTRO DE TRABAJO
-        const teorico = listaTeoricosGlobal.find(t => 
-            String(t.codigo).trim() === String(codigo).trim() &&
-            String(t.centro_trabajo).trim() === String(centroTrabajo).trim() // Asegurate que la propiedad en listaTeoricosGlobal se llame así
-        );
-        
-        let kgTeorico = 0;
-        if (teorico) {
-            const peso = parseFloat(teorico.peso) || 0;
-            const uxb = parseFloat(teorico.uxb) || 0;
-            const bultosHora = parseFloat(teorico.bultos_hora) || 0;
-            kgTeorico = uxb * peso * bultosHora * hsTrab;
-        }
-
-        const eficRealPct = kgTeorico > 0 ? ((kgReales / kgTeorico) * 100) : 0;
-        const decomisoPct = kgReales > 0 ? ((decomisoKg / kgReales) * 100) : 0;
-        const reprocesoPct = kgReales > 0 ? ((reprocesoKg / kgReales) * 100) : 0;
-        const scrapPct = kgReales > 0 ? ((scrapKg / kgReales) * 100) : 0;
-
-        const elEfic = document.getElementById('kpi_efic_real');
-        const elDecomiso = document.getElementById('kpi_decomiso_pct');
-        const elReproceso = document.getElementById('kpi_reproceso_pct');
-        const elScrap = document.getElementById('kpi_scrap_pct');
-
-        if (elEfic) elEfic.value = `${eficRealPct.toFixed(1)}%`;
-        if (elDecomiso) elDecomiso.value = `${decomisoPct.toFixed(2)}%`;
-        if (elReproceso) elReproceso.value = `${reprocesoPct.toFixed(2)}%`;
-        if (elScrap) elScrap.value = `${scrapPct.toFixed(2)}%`;
+    const teorico = listaTeoricosGlobal.find(t => 
+        String(t.codigo).trim() === String(codigo).trim() &&
+        String(t.centro_trabajo).trim() === String(centroTrabajo).trim()
+    );
+    
+    let kgTeorico = 0;
+    if (teorico) {
+        const peso = parseFloat(teorico.peso) || 0;
+        const uxb = parseFloat(teorico.uxb) || 0;
+        const bultosHora = parseFloat(teorico.bultos_hora) || 0;
+        kgTeorico = uxb * peso * bultosHora * hsTrab;
     }
+
+    const eficRealPct = kgTeorico > 0 ? ((kgReales / kgTeorico) * 100) : 0;
+    const decomisoPct = kgReales > 0 ? ((decomisoKg / kgReales) * 100) : 0;
+    const reprocesoPct = kgReales > 0 ? ((reprocesoKg / kgReales) * 100) : 0;
+    const scrapPct = kgReales > 0 ? ((scrapKg / kgReales) * 100) : 0;
+
+    // Sumar minutos de las 12 detenciones para calcular Incidencia Total %
+    const tiposDetencion = [
+        'produccion', 'refrigerio', 'mecanico', 'electrico',
+        'calidad', 'programacion', 'limpieza', 'abastecimiento',
+        'desarrollo', 'alistamiento', 'rrhh', 'suministro'
+    ];
+    let totalMinDetencion = 0;
+    tiposDetencion.forEach(tipo => {
+        totalMinDetencion += parseFloat(document.getElementById(`detencion_${tipo}`)?.value) || 0;
+    });
+
+    const totalMinutosTurno = hsTrab * 60;
+    const incidenciaTotalPct = totalMinutosTurno > 0 ? ((totalMinDetencion / totalMinutosTurno) * 100) : 0;
+
+    // Rendimiento % = Eficiencia + Mermas + Incidencia
+    const rendimientoPct = eficRealPct + decomisoPct + reprocesoPct + scrapPct + incidenciaTotalPct;
+
+    const elEfic = document.getElementById('kpi_efic_real');
+    const elDecomiso = document.getElementById('kpi_decomiso_pct');
+    const elReproceso = document.getElementById('kpi_reproceso_pct');
+    const elScrap = document.getElementById('kpi_scrap_pct');
+    const elIncidencia = document.getElementById('kpi_incidencia_pct');
+    const elRendimiento = document.getElementById('kpi_rendimiento_pct');
+
+    if (elEfic) elEfic.value = `${eficRealPct.toFixed(1)}%`;
+    if (elDecomiso) elDecomiso.value = `${decomisoPct.toFixed(2)}%`;
+    if (elReproceso) elReproceso.value = `${reprocesoPct.toFixed(2)}%`;
+    if (elScrap) elScrap.value = `${scrapPct.toFixed(2)}%`;
+    if (elIncidencia) elIncidencia.value = `${incidenciaTotalPct.toFixed(2)}%`;
+    if (elRendimiento) elRendimiento.value = `${rendimientoPct.toFixed(1)}%`;
+}
     function autocompletarContextoTurno() {
     const ahora = new Date();
     const minutosDelDia = ahora.getHours() * 60 + ahora.getMinutes();
@@ -563,30 +584,34 @@
     }
 
     async function abrirFormulario() {
-        document.getElementById('form-planilla').reset();
-        document.getElementById('planilla-id').value = '';
-        
-        try {
-            if (!listaSectoresGlobal || listaSectoresGlobal.length === 0) {
-                await cargarBaseDatosAuxiliares();
-            }
-        } catch (err) {
-            console.error("No se pudieron cargar los sectores al abrir:", err);
+    document.getElementById('form-planilla').reset();
+    document.getElementById('planilla-id').value = '';
+    
+    // Completa Fecha y Turno después del reset()
+    autocompletarContextoTurno();
+    
+    try {
+        if (!listaSectoresGlobal || listaSectoresGlobal.length === 0) {
+            await cargarBaseDatosAuxiliares();
         }
-        
-        poblarComboSectores();
-        calcularKPIsEnTiempoReal();
-        
-        document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
-        
-        const modal = document.getElementById('modal-planilla');
-        if (modal) {
-            modal.style.display = 'flex';
-        }
-        
-        const bodyScroll = document.querySelector('.modal-body-scroll');
-        if (bodyScroll) bodyScroll.scrollTop = 0;
+    } catch (err) {
+        console.error("No se pudieron cargar los sectores al abrir:", err);
     }
+    
+    poblarComboSectores();
+    calcularKPIsEnTiempoReal();
+    calcularIncidenciaDetenciones();
+    
+    document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
+    
+    const modal = document.getElementById('modal-planilla');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+    
+    const bodyScroll = document.querySelector('.modal-body-scroll');
+    if (bodyScroll) bodyScroll.scrollTop = 0;
+}
 
     function modificarPlanilla(id) {
         const r = datosGlobales.find(p => p.id === id);
@@ -772,27 +797,41 @@
         });
     }
     function calcularIncidenciaDetenciones() {
-        // Tomar las horas trabajadas (ej: 8 hs = 480 min)
-        const hsTrab = parseFloat(document.getElementById('horas_trabajadas')?.value) || 0;
-        const totalMinutosTurno = hsTrab * 60;
+    const hsTrab = parseFloat(document.getElementById('horas_trabajadas')?.value) || 0;
+    const totalMinutosTurno = hsTrab * 60;
 
-        const tiposDetencion = [
-            'produccion', 'refrigerio', 'mecanico', 'electrico',
-            'calidad', 'programacion', 'limpieza', 'abastecimiento',
-            'desarrollo', 'alistamiento', 'rrhh', 'suministro'
-        ];
+    const tiposDetencion = [
+        'produccion', 'refrigerio', 'mecanico', 'electrico',
+        'calidad', 'programacion', 'limpieza', 'abastecimiento',
+        'desarrollo', 'alistamiento', 'rrhh', 'suministro'
+    ];
 
-        tiposDetencion.forEach(tipo => {
-            const inputMin = document.getElementById(`detencion_${tipo}`);
-            const inputPct = document.getElementById(`pct_detencion_${tipo}`);
-            
-            if (inputMin && inputPct) {
-                const min = parseFloat(inputMin.value) || 0;
-                const pct = totalMinutosTurno > 0 ? ((min / totalMinutosTurno) * 100) : 0;
-                inputPct.value = `${pct.toFixed(2)}%`;
-            }
-        });
-    }
+    tiposDetencion.forEach(tipo => {
+        const inputMin = document.getElementById(`detencion_${tipo}`);
+        const inputPct = document.getElementById(`pct_detencion_${tipo}`);
+        
+        if (inputMin && inputPct) {
+            const min = parseFloat(inputMin.value) || 0;
+            const pct = totalMinutosTurno > 0 ? ((min / totalMinutosTurno) * 100) : 0;
+            inputPct.value = `${pct.toFixed(2)}%`;
+        }
+    });
+
+    // Actualiza también Incidencia Total % y Rendimiento % en la caja superior
+    calcularKPIsEnTiempoReal();
+}
+    function abrirModalNuevaPlanilla() {
+    idSeleccionado = null;
+    
+    // 1. Acá tu código actual que limpia los inputs (ej. form.reset() o limpiarFormulario())
+    limpiarFormulario(); 
+
+    // 2. Volvés a completar Fecha y Turno DESPUÉS de limpiar
+    autocompletarContextoTurno();
+
+    // 3. Abrís el modal
+    document.getElementById('modalPlanilla').style.display = 'block';
+}
 </script>
 
 </body>
