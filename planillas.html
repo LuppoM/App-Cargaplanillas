@@ -756,85 +756,91 @@
     }
 
     async function guardarPlanilla(e) {
-        e.preventDefault();
-        
-        const codigoVal = document.getElementById('codigo').value.trim();
-        const sectorVal = document.getElementById('centro_trabajo').value;
+    e.preventDefault();
+    
+    const codigoVal = document.getElementById('codigo').value.trim();
+    const sectorVal = document.getElementById('centro_trabajo').value;
 
-        // Bloquear guardado si el código no corresponde al Centro de Trabajo seleccionado
-        if (!obtenerTeoricoValido(codigoVal, sectorVal)) {
-            alert("El código ingresado no corresponde al Centro de Trabajo seleccionado (o no existe en teóricos). Verificá el sector y el código antes de guardar.");
-            return;
-        }
-
-        const idEdit = document.getElementById('planilla-id').value;
-        const dotTeorica = parseFloat(document.getElementById('dotacion_teorica').value) || 0;
-        const dotRealVal = document.getElementById('dotacion_real').value;
-
-        const payload = {
-            fecha: document.getElementById('fecha').value,
-            planta: plantaActual,
-            turno: document.getElementById('turno').value,
-            centro_trabajo: sectorVal,
-            codigo: codigoVal,
-            horas_trabajadas: parseFloat(document.getElementById('horas_trabajadas').value) || 0,
-            dotacion_teorica: dotTeorica,
-            dotacion_real: dotRealVal !== "" ? parseFloat(dotRealVal) : dotTeorica,
-            kg_cajas_reales: parseFloat(document.getElementById('kg_cajas_reales').value) || 0,
-            peso_promedio_unid_kg: parseFloat(document.getElementById('peso_promedio_unid_kg').value) || 0,
-            decomiso_kg: parseFloat(document.getElementById('decomiso_kg').value) || 0,
-            reproceso_kg: parseFloat(document.getElementById('reproceso_kg').value) || 0,
-            scrap_flex_kg: parseFloat(document.getElementById('scrap_flex_kg').value) || 0,
-            
-            detencion_produccion: parseFloat(document.getElementById('detencion_produccion').value) || 0,
-            detencion_refrigerio: parseFloat(document.getElementById('detencion_refrigerio').value) || 0,
-            detencion_mecanico: parseFloat(document.getElementById('detencion_mecanico').value) || 0,
-            detencion_electrico: parseFloat(document.getElementById('detencion_electrico').value) || 0,
-            detencion_calidad: parseFloat(document.getElementById('detencion_calidad').value) || 0,
-            detencion_programacion: parseFloat(document.getElementById('detencion_programacion').value) || 0,
-            detencion_limpieza: parseFloat(document.getElementById('detencion_limpieza').value) || 0,
-            detencion_abastecimiento: parseFloat(document.getElementById('detencion_abastecimiento').value) || 0,
-            detencion_desarrollo: parseFloat(document.getElementById('detencion_desarrollo').value) || 0,
-            detencion_alistamiento: parseFloat(document.getElementById('detencion_alistamiento').value) || 0,
-            detencion_rrhh: parseFloat(document.getElementById('detencion_rrhh').value) || 0,
-            detencion_suministro: parseFloat(document.getElementById('detencion_suministro').value) || 0,
-
-            obs_detencion_produccion: document.getElementById('obs_detencion_produccion')?.value || '',
-            obs_detencion_refrigerio: document.getElementById('obs_detencion_refrigerio')?.value || '',
-            obs_detencion_mecanico: document.getElementById('obs_detencion_mecanico')?.value || '',
-            obs_detencion_electrico: document.getElementById('obs_detencion_electrico')?.value || '',
-            obs_detencion_calidad: document.getElementById('obs_detencion_calidad')?.value || '',
-            obs_detencion_programacion: document.getElementById('obs_detencion_programacion')?.value || '',
-            obs_detencion_limpieza: document.getElementById('obs_detencion_limpieza')?.value || '',
-            obs_detencion_abastecimiento: document.getElementById('obs_detencion_abastecimiento')?.value || '',
-            obs_detencion_desarrollo: document.getElementById('obs_detencion_desarrollo')?.value || '',
-            obs_detencion_alistamiento: document.getElementById('obs_detencion_alistamiento')?.value || '',
-            obs_detencion_rrhh: document.getElementById('obs_detencion_rrhh')?.value || '',
-            obs_detencion_suministro: document.getElementById('obs_detencion_suministro')?.value || ''
-        };
-
-        const esEdicion = Boolean(idEdit);
-        const url = esEdicion ? `/api/planillas/${idEdit}` : '/api/planillas';
-        const metodo = esEdicion ? 'PUT' : 'POST';
-
-        try {
-            const res = await fetch(url, {
-                method: metodo,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                cerrarFormulario();
-                cargarPlanillas();
-            } else {
-                alert(`Error al ${esEdicion ? 'actualizar' : 'registrar'} la planilla.`);
-            }
-        } catch (err) {
-            console.error("Error al guardar planilla:", err);
-            alert("Error de conexión al guardar.");
-        }
+    // Bloquear guardado si el código no corresponde al Centro de Trabajo seleccionado
+    if (!obtenerTeoricoValido(codigoVal, sectorVal)) {
+        alert("El código ingresado no corresponde al Centro de Trabajo seleccionado (o no existe en teóricos). Verificá el sector y el código antes de guardar.");
+        return;
     }
+
+    const idEdit = document.getElementById('planilla-id').value;
+    const dotTeorica = parseFloat(document.getElementById('dotacion_teorica').value) || 0;
+    const dotRealVal = document.getElementById('dotacion_real').value;
+
+    // Agrupar las detenciones en el formato que espera FastAPI / PostgreSQL
+    const mapDetenciones = [
+        { key: 'produccion', taller: 'Producción' },
+        { key: 'refrigerio', taller: 'Refrigerio' },
+        { key: 'mecanico', taller: 'Mecánico' },
+        { key: 'electrico', taller: 'Eléctrico' },
+        { key: 'calidad', taller: 'Calidad' },
+        { key: 'programacion', taller: 'Programación' },
+        { key: 'limpieza', taller: 'Limpieza' },
+        { key: 'abastecimiento', taller: 'Abastecimiento' },
+        { key: 'desarrollo', taller: 'Desarrollo' },
+        { key: 'alistamiento', taller: 'Alistamiento' },
+        { key: 'rrhh', taller: 'RRHH' },
+        { key: 'suministro', taller: 'Suministro' }
+    ];
+
+    const detenciones = [];
+    mapDetenciones.forEach(item => {
+        const min = parseFloat(document.getElementById(`detencion_${item.key}`)?.value) || 0;
+        const obs = document.getElementById(`obs_detencion_${item.key}`)?.value.trim() || '';
+        if (min > 0) {
+            detenciones.push({
+                taller: item.taller,
+                descripcion: obs,
+                horas: Number((min / 60).toFixed(4))
+            });
+        }
+    });
+
+    const payload = {
+        fecha: document.getElementById('fecha').value,
+        planta: plantaActual,
+        turno: document.getElementById('turno').value,
+        centro_trabajo: sectorVal,
+        codigo: codigoVal,
+        horas_trabajadas: parseFloat(document.getElementById('horas_trabajadas').value) || 0,
+        dotacion_teorica: dotTeorica,
+        dotacion_real: dotRealVal !== "" ? parseFloat(dotRealVal) : dotTeorica,
+        kg_cajas_reales: parseFloat(document.getElementById('kg_cajas_reales').value) || 0,
+        peso_promedio_unid_kg: parseFloat(document.getElementById('peso_promedio_unid_kg').value) || 0,
+        decomiso_kg: parseFloat(document.getElementById('decomiso_kg').value) || 0,
+        reproceso_kg: parseFloat(document.getElementById('reproceso_kg').value) || 0,
+        scrap_flex_kg: parseFloat(document.getElementById('scrap_flex_kg').value) || 0,
+        detenciones: detenciones
+    };
+
+    const esEdicion = Boolean(idEdit);
+    const url = esEdicion ? `/api/planillas/${idEdit}` : '/api/planillas';
+    const metodo = esEdicion ? 'PUT' : 'POST';
+
+    try {
+        const res = await fetch(url, {
+            method: metodo,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            cerrarFormulario();
+            cargarPlanillas();
+        } else {
+            const detalle = await res.text();
+            console.error("Respuesta del servidor:", res.status, detalle);
+            alert(`Error ${res.status} al ${esEdicion ? 'actualizar' : 'registrar'} la planilla:\n${detalle}`);
+        }
+    } catch (err) {
+        console.error("Error al guardar planilla:", err);
+        alert("Error de conexión al guardar.");
+    }
+}
 
     function aplicarFiltros() {
         const textoBusqueda = document.getElementById('input-buscar').value.toLowerCase().trim();
