@@ -20,8 +20,13 @@ app = FastAPI(title="API PRODUCCIÓN")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=BASE_DIR)
 
-# Montar archivos estáticos y assets
-app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+from typing import Optional, List
+
+class DetencionItemSchema(BaseModel):
+    taller: str
+    descripcion: Optional[str] = ""
+    horas: float = 0.0
+
 class PlanillaSchema(BaseModel):
     fecha: date
     planta: str
@@ -48,7 +53,7 @@ class PlanillaSchema(BaseModel):
     detencion_alistamiento: float = 0.0
     detencion_rrhh: float = 0.0
     detencion_suministro: float = 0.0
-
+    detenciones: Optional[List[DetencionItemSchema]] = []
 # ==========================================
 # 1. VISTAS HTML PRINCIPALES (RUTAS DIRECTAS)
 # ==========================================
