@@ -559,7 +559,7 @@
                 <td>${kpi.incidenciaPct}%</td>
                 <td>${item.dotacion_real || item.dotacion_teorica}</td>
                 <td>
-                    <button class="btn-edit" onclick="event.stopPropagation(); modificarPlanilla(${item.id})">Editar</button>
+                    <button class="btn-edit" onclick="event.stopPropagation(); verDetenciones(${item.id})">Detenciones</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -862,7 +862,58 @@
             }
         });
     }
+async function verDetenciones(id) {
+    const modal = document.getElementById('modal-detenciones');
+    const tbody = document.getElementById('tbody-detalle-detenciones');
+    const titulo = document.getElementById('titulo-modal-detenciones');
+    const resumen = document.getElementById('resumen-total-detenciones');
 
+    titulo.innerText = `Detenciones - Planilla #${id}`;
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:12px; text-align:center;">Cargando detenciones...</td></tr>';
+    resumen.innerText = '';
+    modal.style.display = 'flex';
+
+    try {
+        const res = await fetch(`/api/planillas/${id}`);
+        if (!res.ok) throw new Error("No se pudo obtener el detalle");
+
+        const json = await res.json();
+        const planilla = json.datos || {};
+        const detenciones = planilla.detenciones || [];
+
+        titulo.innerText = `Detenciones - Planilla #${id} (${planilla.centro_trabajo || ''} | ${planilla.fecha || ''})`;
+
+        if (detenciones.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="padding:14px; text-align:center; color:#64748b;">Esta planilla no tiene detenciones registradas.</td></tr>';
+            resumen.innerText = 'Total: 0 min (0.00 hs)';
+            return;
+        }
+
+        let totalMin = 0;
+        tbody.innerHTML = detenciones.map(d => {
+            const hs = parseFloat(d.horas) || 0;
+            const min = Math.round(hs * 60);
+            totalMin += min;
+            return `
+                <tr>
+                    <td style="padding:8px; border-bottom:1px solid #e2e8f0;"><strong>${d.taller}</strong></td>
+                    <td style="padding:8px; border-bottom:1px solid #e2e8f0;">${min} min</td>
+                    <td style="padding:8px; border-bottom:1px solid #e2e8f0;">${hs.toFixed(2)} hs</td>
+                    <td style="padding:8px; border-bottom:1px solid #e2e8f0;">${d.descripcion || '-'}</td>
+                </tr>
+            `;
+        }).join('');
+
+        resumen.innerText = `Total: ${totalMin} min (${(totalMin / 60).toFixed(2)} hs)`;
+    } catch (err) {
+        console.error("Error al consultar detenciones:", err);
+        tbody.innerHTML = '<tr><td colspan="4" style="padding:12px; text-align:center; color:#dc2626;">Error al cargar las detenciones.</td></tr>';
+    }
+}
+
+function cerrarModalDetenciones() {
+    document.getElementById('modal-detenciones').style.display = 'none';
+}
     function calcularIncidenciaDetenciones() {
         const hsTrab = parseFloat(document.getElementById('horas_trabajadas')?.value) || 0;
         const totalMinutosTurno = hsTrab * 60;
@@ -888,6 +939,32 @@
         calcularKPIsEnTiempoReal();
     }
 </script>
+<div id="modal-detenciones" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:10px; width:92%; max-width:650px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.25);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:10px; margin-bottom:14px;">
+            <h3 id="titulo-modal-detenciones" style="margin:0; color:#0f172a; font-size:1.1rem;">Detenciones de Planilla</h3>
+            <button onclick="cerrarModalDetenciones()" style="background:none; border:none; font-size:1.3rem; cursor:pointer; color:#64748b;">&times;</button>
+        </div>
 
+        <div style="max-height:340px; overflow-y:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                <thead>
+                    <tr style="background:#f1f5f9; text-align:left; color:#334155;">
+                        <th style="padding:8px; border-bottom:1px solid #cbd5e1;">Taller / Motivo</th>
+                        <th style="padding:8px; border-bottom:1px solid #cbd5e1;">Minutos</th>
+                        <th style="padding:8px; border-bottom:1px solid #cbd5e1;">Horas</th>
+                        <th style="padding:8px; border-bottom:1px solid #cbd5e1;">Observación</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-detalle-detenciones"></tbody>
+            </table>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:10px; border-top:1px solid #e2e8f0;">
+            <strong id="resumen-total-detenciones" style="color:#0369a1; font-size:0.95rem;"></strong>
+            <button onclick="cerrarModalDetenciones()" style="background:#334155; color:#fff; border:none; padding:7px 16px; border-radius:6px; cursor:pointer;">Cerrar</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
