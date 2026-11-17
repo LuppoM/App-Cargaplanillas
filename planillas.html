@@ -270,41 +270,39 @@
     let listaTeoricosGlobal = [];
     let idSeleccionado = null;
 
-   document.addEventListener('DOMContentLoaded', async () => {
-    await cargarBaseDatosAuxiliares();
-    cargarPlanillas();
-    autocompletarContextoTurno();
-    
+    document.addEventListener('DOMContentLoaded', async () => {
+        await cargarBaseDatosAuxiliares();
+        cargarPlanillas();
+        autocompletarContextoTurno();
 
-    const tiposDetencion = [
-        'produccion', 'refrigerio', 'mecanico', 'electrico',
-        'calidad', 'programacion', 'limpieza', 'abastecimiento',
-        'desarrollo', 'alistamiento', 'rrhh', 'suministro'
-    ];
+        const tiposDetencion = [
+            'produccion', 'refrigerio', 'mecanico', 'electrico',
+            'calidad', 'programacion', 'limpieza', 'abastecimiento',
+            'desarrollo', 'alistamiento', 'rrhh', 'suministro'
+        ];
 
-    // Listeners para los inputs de detenciones (escuchan cambios y minutos)
-    tiposDetencion.forEach(tipo => {
-        const inputMin = document.getElementById(`detencion_${tipo}`);
-        if (inputMin) {
-            inputMin.addEventListener('input', calcularIncidenciaDetenciones);
-            inputMin.addEventListener('change', calcularIncidenciaDetenciones);
-            
+        // Listeners para los inputs de detenciones (escuchan cambios y minutos)
+        tiposDetencion.forEach(tipo => {
+            const inputMin = document.getElementById(`detencion_${tipo}`);
+            if (inputMin) {
+                inputMin.addEventListener('input', calcularIncidenciaDetenciones);
+                inputMin.addEventListener('change', calcularIncidenciaDetenciones);
+            }
+        });
+
+        // Si cambian las Horas Trabajadas, recalcular tanto KPIs como Detenciones
+        const elHoras = document.getElementById('horas_trabajadas');
+        if (elHoras) {
+            elHoras.addEventListener('input', () => {
+                calcularKPIsEnTiempoReal();
+                calcularIncidenciaDetenciones();
+            });
+            elHoras.addEventListener('change', () => {
+                calcularKPIsEnTiempoReal();
+                calcularIncidenciaDetenciones();
+            });
         }
     });
-
-    // Si cambian las Horas Trabajadas, recalcular tanto KPIs como Detenciones
-    const elHoras = document.getElementById('horas_trabajadas');
-    if (elHoras) {
-        elHoras.addEventListener('input', () => {
-            calcularKPIsEnTiempoReal();
-            calcularIncidenciaDetenciones();
-        });
-        elHoras.addEventListener('change', () => {
-            calcularKPIsEnTiempoReal();
-            calcularIncidenciaDetenciones();
-        });
-    }
-});
 
     function cambiarSolapa(planta) {
         plantaActual = planta;
@@ -359,6 +357,19 @@
         }
     }
 
+    // Helper para buscar teórico validando Código + Centro de Trabajo
+    function obtenerTeoricoValido(codigo, centroTrabajo) {
+        const cod = String(codigo || '').trim().toLowerCase();
+        const sec = String(centroTrabajo || '').trim().toLowerCase();
+        if (!cod || !sec) return null;
+
+        return listaTeoricosGlobal.find(t => {
+            const codMatch = String(t.codigo || '').trim().toLowerCase() === cod;
+            const secTeor = String(t.centro_trabajo || t.sector || '').trim().toLowerCase();
+            return codMatch && secTeor === sec;
+        }) || null;
+    }
+
     function calcularKPIs(item) {
         const hsTrab = parseFloat(item.horas_trabajadas) || 0;
         const kgReales = parseFloat(item.kg_cajas_reales) || 0;
@@ -366,7 +377,8 @@
         const reprocesoKg = parseFloat(item.reproceso_kg) || 0;
         const scrapKg = parseFloat(item.scrap_flex_kg) || 0;
 
-        const teorico = listaTeoricosGlobal.find(t => String(t.codigo).trim() === String(item.codigo).trim());
+        const teorico = obtenerTeoricoValido(item.codigo, item.centro_trabajo) ||
+                        listaTeoricosGlobal.find(t => String(t.codigo).trim().toLowerCase() === String(item.codigo).trim().toLowerCase());
         
         let kgTeorico = 0;
         if (teorico) {
@@ -374,6 +386,12 @@
             const uxb = parseFloat(teorico.uxb) || 0;
             const bultosHora = parseFloat(teorico.bultos_hora) || 0;
             kgTeorico = uxb * peso * bultosHora * hsTrab;
+
+            const dotTeorica = parseFloat(item.dotacion_teorica) || 0;
+            const dotReal = parseFloat(item.dotacion_real) || dotTeorica;
+            if (dotTeorica > 0 && dotReal > 0) {
+                kgTeorico = kgTeorico * (dotReal / dotTeorica);
+            }
         }
 
         const eficRealPct = kgTeorico > 0 ? ((kgReales / kgTeorico) * 100) : 0;
@@ -407,100 +425,106 @@
         };
     }
 
-        function calcularKPIsEnTiempoReal() {
-    const hsTrab = parseFloat(document.getElementById('horas_trabajadas').value) || 0;
-    const kgReales = parseFloat(document.getElementById('kg_cajas_reales').value) || 0;
-    const decomisoKg = parseFloat(document.getElementById('decomiso_kg').value) || 0;
-    const reprocesoKg = parseFloat(document.getElementById('reproceso_kg').value) || 0;
-    const scrapKg = parseFloat(document.getElementById('scrap_flex_kg').value) || 0;
-    
-    const codigo = document.getElementById('codigo').value.trim();
-    const centroTrabajo = document.getElementById('centro_trabajo').value.trim();
+    function calcularKPIsEnTiempoReal() {
+        const hsTrab = parseFloat(document.getElementById('horas_trabajadas').value) || 0;
+        const kgReales = parseFloat(document.getElementById('kg_cajas_reales').value) || 0;
+        const decomisoKg = parseFloat(document.getElementById('decomiso_kg').value) || 0;
+        const reprocesoKg = parseFloat(document.getElementById('reproceso_kg').value) || 0;
+        const scrapKg = parseFloat(document.getElementById('scrap_flex_kg').value) || 0;
+        
+        const dotTeorica = parseFloat(document.getElementById('dotacion_teorica').value) || 0;
+        const dotRealVal = document.getElementById('dotacion_real').value;
+        const dotReal = dotRealVal !== "" ? (parseFloat(dotRealVal) || 0) : dotTeorica;
 
-    const teorico = listaTeoricosGlobal.find(t => 
-        String(t.codigo).trim() === String(codigo).trim() &&
-        String(t.centro_trabajo).trim() === String(centroTrabajo).trim()
-    );
-    
-    let kgTeorico = 0;
-    if (teorico) {
-        const peso = parseFloat(teorico.peso) || 0;
-        const uxb = parseFloat(teorico.uxb) || 0;
-        const bultosHora = parseFloat(teorico.bultos_hora) || 0;
-        kgTeorico = uxb * peso * bultosHora * hsTrab;
+        const codigo = document.getElementById('codigo').value.trim();
+        const centroTrabajo = document.getElementById('centro_trabajo').value.trim();
+
+        const teorico = obtenerTeoricoValido(codigo, centroTrabajo);
+        
+        let kgTeorico = 0;
+        if (teorico) {
+            const peso = parseFloat(teorico.peso) || 0;
+            const uxb = parseFloat(teorico.uxb) || 0;
+            const bultosHora = parseFloat(teorico.bultos_hora) || 0;
+            kgTeorico = uxb * peso * bultosHora * hsTrab;
+
+            if (dotTeorica > 0 && dotReal > 0) {
+                kgTeorico = kgTeorico * (dotReal / dotTeorica);
+            }
+        }
+
+        const eficRealPct = kgTeorico > 0 ? ((kgReales / kgTeorico) * 100) : 0;
+        const decomisoPct = kgReales > 0 ? ((decomisoKg / kgReales) * 100) : 0;
+        const reprocesoPct = kgReales > 0 ? ((reprocesoKg / kgReales) * 100) : 0;
+        const scrapPct = kgReales > 0 ? ((scrapKg / kgReales) * 100) : 0;
+
+        // Sumar minutos de las 12 detenciones para calcular Incidencia Total %
+        const tiposDetencion = [
+            'produccion', 'refrigerio', 'mecanico', 'electrico',
+            'calidad', 'programacion', 'limpieza', 'abastecimiento',
+            'desarrollo', 'alistamiento', 'rrhh', 'suministro'
+        ];
+        let totalMinDetencion = 0;
+        tiposDetencion.forEach(tipo => {
+            totalMinDetencion += parseFloat(document.getElementById(`detencion_${tipo}`)?.value) || 0;
+        });
+
+        const totalMinutosTurno = hsTrab * 60;
+        const incidenciaTotalPct = totalMinutosTurno > 0 ? ((totalMinDetencion / totalMinutosTurno) * 100) : 0;
+
+        // Rendimiento % = Eficiencia + Mermas + Incidencia
+        const rendimientoPct = eficRealPct + decomisoPct + reprocesoPct + scrapPct + incidenciaTotalPct;
+
+        const elEfic = document.getElementById('kpi_efic_real');
+        const elDecomiso = document.getElementById('kpi_decomiso_pct');
+        const elReproceso = document.getElementById('kpi_reproceso_pct');
+        const elScrap = document.getElementById('kpi_scrap_pct');
+        const elIncidencia = document.getElementById('kpi_incidencia_pct');
+        const elRendimiento = document.getElementById('kpi_rendimiento_pct');
+
+        if (elEfic) elEfic.value = `${eficRealPct.toFixed(1)}%`;
+        if (elDecomiso) elDecomiso.value = `${decomisoPct.toFixed(2)}%`;
+        if (elReproceso) elReproceso.value = `${reprocesoPct.toFixed(2)}%`;
+        if (elScrap) elScrap.value = `${scrapPct.toFixed(2)}%`;
+        if (elIncidencia) elIncidencia.value = `${incidenciaTotalPct.toFixed(2)}%`;
+        if (elRendimiento) elRendimiento.value = `${rendimientoPct.toFixed(1)}%`;
     }
 
-    const eficRealPct = kgTeorico > 0 ? ((kgReales / kgTeorico) * 100) : 0;
-    const decomisoPct = kgReales > 0 ? ((decomisoKg / kgReales) * 100) : 0;
-    const reprocesoPct = kgReales > 0 ? ((reprocesoKg / kgReales) * 100) : 0;
-    const scrapPct = kgReales > 0 ? ((scrapKg / kgReales) * 100) : 0;
-
-    // Sumar minutos de las 12 detenciones para calcular Incidencia Total %
-    const tiposDetencion = [
-        'produccion', 'refrigerio', 'mecanico', 'electrico',
-        'calidad', 'programacion', 'limpieza', 'abastecimiento',
-        'desarrollo', 'alistamiento', 'rrhh', 'suministro'
-    ];
-    let totalMinDetencion = 0;
-    tiposDetencion.forEach(tipo => {
-        totalMinDetencion += parseFloat(document.getElementById(`detencion_${tipo}`)?.value) || 0;
-    });
-
-    const totalMinutosTurno = hsTrab * 60;
-    const incidenciaTotalPct = totalMinutosTurno > 0 ? ((totalMinDetencion / totalMinutosTurno) * 100) : 0;
-
-    // Rendimiento % = Eficiencia + Mermas + Incidencia
-    const rendimientoPct = eficRealPct + decomisoPct + reprocesoPct + scrapPct + incidenciaTotalPct;
-
-    const elEfic = document.getElementById('kpi_efic_real');
-    const elDecomiso = document.getElementById('kpi_decomiso_pct');
-    const elReproceso = document.getElementById('kpi_reproceso_pct');
-    const elScrap = document.getElementById('kpi_scrap_pct');
-    const elIncidencia = document.getElementById('kpi_incidencia_pct');
-    const elRendimiento = document.getElementById('kpi_rendimiento_pct');
-
-    if (elEfic) elEfic.value = `${eficRealPct.toFixed(1)}%`;
-    if (elDecomiso) elDecomiso.value = `${decomisoPct.toFixed(2)}%`;
-    if (elReproceso) elReproceso.value = `${reprocesoPct.toFixed(2)}%`;
-    if (elScrap) elScrap.value = `${scrapPct.toFixed(2)}%`;
-    if (elIncidencia) elIncidencia.value = `${incidenciaTotalPct.toFixed(2)}%`;
-    if (elRendimiento) elRendimiento.value = `${rendimientoPct.toFixed(1)}%`;
-}
     function autocompletarContextoTurno() {
-    const ahora = new Date();
-    const minutosDelDia = ahora.getHours() * 60 + ahora.getMinutes();
+        const ahora = new Date();
+        const minutosDelDia = ahora.getHours() * 60 + ahora.getMinutes();
 
-    let turno = "Mañana";
-    const fechaOperativa = new Date(ahora);
+        let turno = "Mañana";
+        const fechaOperativa = new Date(ahora);
 
-    // 07:30 (450 min) a 15:29 (929 min) -> Mañana (hoy)
-    if (minutosDelDia >= 450 && minutosDelDia <= 929) {
-        turno = "Mañana";
+        // 07:30 (450 min) a 15:29 (929 min) -> Mañana (hoy)
+        if (minutosDelDia >= 450 && minutosDelDia <= 929) {
+            turno = "Mañana";
+        }
+        // 15:30 (930 min) a 23:29 (1409 min) -> Tarde (hoy)
+        else if (minutosDelDia >= 930 && minutosDelDia <= 1409) {
+            turno = "Tarde";
+        }
+        // 23:30 a 23:59 -> Noche (hoy)
+        else if (minutosDelDia >= 1410) {
+            turno = "Noche";
+        }
+        // 00:00 a 07:29 (449 min) -> Noche (fecha de ayer)
+        else {
+            turno = "Noche";
+            fechaOperativa.setDate(fechaOperativa.getDate() - 1);
+        }
+
+        const yyyy = fechaOperativa.getFullYear();
+        const mm = String(fechaOperativa.getMonth() + 1).padStart(2, "0");
+        const dd = String(fechaOperativa.getDate()).padStart(2, "0");
+
+        const inputFecha = document.getElementById("fecha");
+        const selectTurno = document.getElementById("turno");
+
+        if (inputFecha) inputFecha.value = `${yyyy}-${mm}-${dd}`;
+        if (selectTurno) selectTurno.value = turno;
     }
-    // 15:30 (930 min) a 23:29 (1409 min) -> Tarde (hoy)
-    else if (minutosDelDia >= 930 && minutosDelDia <= 1409) {
-        turno = "Tarde";
-    }
-    // 23:30 a 23:59 -> Noche (hoy)
-    else if (minutosDelDia >= 1410) {
-        turno = "Noche";
-    }
-    // 00:00 a 07:29 (449 min) -> Noche (fecha de ayer)
-    else {
-        turno = "Noche";
-        fechaOperativa.setDate(fechaOperativa.getDate() - 1);
-    }
-
-    const yyyy = fechaOperativa.getFullYear();
-    const mm = String(fechaOperativa.getMonth() + 1).padStart(2, "0");
-    const dd = String(fechaOperativa.getDate()).padStart(2, "0");
-
-    const inputFecha = document.getElementById("fecha");
-    const selectTurno = document.getElementById("turno");
-
-    if (inputFecha) inputFecha.value = `${yyyy}-${mm}-${dd}`;
-    if (selectTurno) selectTurno.value = turno;
-}
 
     function renderizarTabla() {
         const tbody = document.getElementById('tbody-planillas');
@@ -557,7 +581,8 @@
     }
 
     function buscarDescripcionYTeoricoAuto() {
-        const codInput = document.getElementById('codigo').value.trim();
+        const codInput = document.getElementById('codigo').value.trim().toLowerCase();
+        const sectorInput = document.getElementById('centro_trabajo').value.trim().toLowerCase();
         const inputDesc = document.getElementById('descripcion_producto');
         const inputDotacion = document.getElementById('dotacion_teorica');
 
@@ -568,15 +593,40 @@
             return;
         }
 
-        const teoricoEncontrado = listaTeoricosGlobal.find(t => 
-            String(t.codigo).toLowerCase().trim() === String(codInput).toLowerCase().trim()
+        // Buscar todas las coincidencias del código en la base de teóricos
+        const coincidenciasCodigo = listaTeoricosGlobal.filter(t => 
+            String(t.codigo || '').trim().toLowerCase() === codInput
         );
 
-        if (teoricoEncontrado) {
-            inputDesc.value = teoricoEncontrado.descripcion || 'Sin descripción';
-            inputDotacion.value = teoricoEncontrado.dotacion || 0;
+        if (coincidenciasCodigo.length === 0) {
+            inputDesc.value = 'Código no encontrado';
+            inputDotacion.value = 0;
+            calcularKPIsEnTiempoReal();
+            return;
+        }
+
+        if (!sectorInput) {
+            inputDesc.value = 'Seleccione primero un sector';
+            inputDotacion.value = 0;
+            calcularKPIsEnTiempoReal();
+            return;
+        }
+
+        // Validar que el código esté asociado al Centro de Trabajo seleccionado
+        const teoricoValido = coincidenciasCodigo.find(t => {
+            const secTeor = String(t.centro_trabajo || t.sector || '').trim().toLowerCase();
+            return secTeor === sectorInput;
+        });
+
+        if (teoricoValido) {
+            inputDesc.value = teoricoValido.descripcion || 'Sin descripción';
+            inputDotacion.value = teoricoValido.dotacion || 0;
         } else {
-            inputDesc.value = ' Código no encontrado';
+            const sectoresValidos = coincidenciasCodigo
+                .map(t => t.centro_trabajo || t.sector)
+                .filter(Boolean)
+                .join(' / ');
+            inputDesc.value = `⚠️ Pertenece a: ${sectoresValidos || 'otro sector'}`;
             inputDotacion.value = 0;
         }
 
@@ -584,34 +634,34 @@
     }
 
     async function abrirFormulario() {
-    document.getElementById('form-planilla').reset();
-    document.getElementById('planilla-id').value = '';
-    
-    // Completa Fecha y Turno después del reset()
-    autocompletarContextoTurno();
-    
-    try {
-        if (!listaSectoresGlobal || listaSectoresGlobal.length === 0) {
-            await cargarBaseDatosAuxiliares();
+        document.getElementById('form-planilla').reset();
+        document.getElementById('planilla-id').value = '';
+        
+        // Completa Fecha y Turno después del reset()
+        autocompletarContextoTurno();
+        
+        try {
+            if (!listaSectoresGlobal || listaSectoresGlobal.length === 0) {
+                await cargarBaseDatosAuxiliares();
+            }
+        } catch (err) {
+            console.error("No se pudieron cargar los sectores al abrir:", err);
         }
-    } catch (err) {
-        console.error("No se pudieron cargar los sectores al abrir:", err);
+        
+        poblarComboSectores();
+        calcularKPIsEnTiempoReal();
+        calcularIncidenciaDetenciones();
+        
+        document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
+        
+        const modal = document.getElementById('modal-planilla');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+        
+        const bodyScroll = document.querySelector('.modal-body-scroll');
+        if (bodyScroll) bodyScroll.scrollTop = 0;
     }
-    
-    poblarComboSectores();
-    calcularKPIsEnTiempoReal();
-    calcularIncidenciaDetenciones();
-    
-    document.getElementById('modal-titulo').innerText = `Nueva Planilla (${plantaActual.toUpperCase()})`;
-    
-    const modal = document.getElementById('modal-planilla');
-    if (modal) {
-        modal.style.display = 'flex';
-    }
-    
-    const bodyScroll = document.querySelector('.modal-body-scroll');
-    if (bodyScroll) bodyScroll.scrollTop = 0;
-}
 
     function modificarPlanilla(id) {
         const r = datosGlobales.find(p => p.id === id);
@@ -688,6 +738,7 @@
         if (elObsSum) elObsSum.value = r.obs_detencion_suministro || '';
 
         calcularKPIsEnTiempoReal();
+        calcularIncidenciaDetenciones();
 
         document.getElementById('modal-titulo').innerText = `Modificar Planilla #${r.id} (${plantaActual.toUpperCase()})`;
         
@@ -707,6 +758,15 @@
     async function guardarPlanilla(e) {
         e.preventDefault();
         
+        const codigoVal = document.getElementById('codigo').value.trim();
+        const sectorVal = document.getElementById('centro_trabajo').value;
+
+        // Bloquear guardado si el código no corresponde al Centro de Trabajo seleccionado
+        if (!obtenerTeoricoValido(codigoVal, sectorVal)) {
+            alert("El código ingresado no corresponde al Centro de Trabajo seleccionado (o no existe en teóricos). Verificá el sector y el código antes de guardar.");
+            return;
+        }
+
         const idEdit = document.getElementById('planilla-id').value;
         const dotTeorica = parseFloat(document.getElementById('dotacion_teorica').value) || 0;
         const dotRealVal = document.getElementById('dotacion_real').value;
@@ -715,8 +775,8 @@
             fecha: document.getElementById('fecha').value,
             planta: plantaActual,
             turno: document.getElementById('turno').value,
-            centro_trabajo: document.getElementById('centro_trabajo').value,
-            codigo: document.getElementById('codigo').value.trim(),
+            centro_trabajo: sectorVal,
+            codigo: codigoVal,
             horas_trabajadas: parseFloat(document.getElementById('horas_trabajadas').value) || 0,
             dotacion_teorica: dotTeorica,
             dotacion_real: dotRealVal !== "" ? parseFloat(dotRealVal) : dotTeorica,
@@ -796,42 +856,31 @@
             }
         });
     }
+
     function calcularIncidenciaDetenciones() {
-    const hsTrab = parseFloat(document.getElementById('horas_trabajadas')?.value) || 0;
-    const totalMinutosTurno = hsTrab * 60;
+        const hsTrab = parseFloat(document.getElementById('horas_trabajadas')?.value) || 0;
+        const totalMinutosTurno = hsTrab * 60;
 
-    const tiposDetencion = [
-        'produccion', 'refrigerio', 'mecanico', 'electrico',
-        'calidad', 'programacion', 'limpieza', 'abastecimiento',
-        'desarrollo', 'alistamiento', 'rrhh', 'suministro'
-    ];
+        const tiposDetencion = [
+            'produccion', 'refrigerio', 'mecanico', 'electrico',
+            'calidad', 'programacion', 'limpieza', 'abastecimiento',
+            'desarrollo', 'alistamiento', 'rrhh', 'suministro'
+        ];
 
-    tiposDetencion.forEach(tipo => {
-        const inputMin = document.getElementById(`detencion_${tipo}`);
-        const inputPct = document.getElementById(`pct_detencion_${tipo}`);
-        
-        if (inputMin && inputPct) {
-            const min = parseFloat(inputMin.value) || 0;
-            const pct = totalMinutosTurno > 0 ? ((min / totalMinutosTurno) * 100) : 0;
-            inputPct.value = `${pct.toFixed(2)}%`;
-        }
-    });
+        tiposDetencion.forEach(tipo => {
+            const inputMin = document.getElementById(`detencion_${tipo}`);
+            const inputPct = document.getElementById(`pct_detencion_${tipo}`);
+            
+            if (inputMin && inputPct) {
+                const min = parseFloat(inputMin.value) || 0;
+                const pct = totalMinutosTurno > 0 ? ((min / totalMinutosTurno) * 100) : 0;
+                inputPct.value = `${pct.toFixed(2)}%`;
+            }
+        });
 
-    // Actualiza también Incidencia Total % y Rendimiento % en la caja superior
-    calcularKPIsEnTiempoReal();
-}
-    function abrirModalNuevaPlanilla() {
-    idSeleccionado = null;
-    
-    // 1. Acá tu código actual que limpia los inputs (ej. form.reset() o limpiarFormulario())
-    limpiarFormulario(); 
-
-    // 2. Volvés a completar Fecha y Turno DESPUÉS de limpiar
-    autocompletarContextoTurno();
-
-    // 3. Abrís el modal
-    document.getElementById('modalPlanilla').style.display = 'block';
-}
+        // Actualiza también Incidencia Total % y Rendimiento % en la caja superior
+        calcularKPIsEnTiempoReal();
+    }
 </script>
 
 </body>
