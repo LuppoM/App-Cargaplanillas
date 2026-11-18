@@ -8,7 +8,8 @@ from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel  # <-- AGREGAR para la validación de planillas
-
+from fastapi.responses import StreamingResponse
+from nivelestanquepdf import generar_pdf_relevamiento
 import conexion
 from teoricosmodelo import TeoricosModelo
 from sectoresmodelo import SectoresModelo
@@ -363,3 +364,16 @@ def listar_codigos_tanques():
         return {"ok": True, "datos": datos}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar códigos: {str(e)}")
+@app.get("/api/ntanque/{relevamiento_id}/pdf")
+def imprimir_relevamiento_tanques(relevamiento_id: int):
+    reg = generar_pdf_relevamiento(relevamiento_id)
+    if not reg:
+        raise HTTPException(status_code=404, detail="Relevamiento no encontrado")
+
+    pdf_buffer = generar_pdf_relevamiento(reg)
+    filename = f"Planilla_Tanques_{relevamiento_id}.pdf"
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
