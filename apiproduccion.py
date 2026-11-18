@@ -434,7 +434,7 @@ def borrar_relevamiento_tanque(relevamiento_id: int):
 # --- ENDPOINTS USUARIOS Y SESIÓN ---
 
 @app.post("/api/login")
-def login(payload: LoginSchema):
+def login(request: Request, payload: LoginSchema):
     try:
         user = usuariosmodelo.validar_usuario(payload.usuario, payload.clave)
     except Exception as e:
@@ -450,11 +450,18 @@ def login(payload: LoginSchema):
     }
     token = signer.dumps(datos_sesion)
 
+    es_https = (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto") == "https"
+        or "vercel.app" in str(request.base_url)
+    )
+
     response = JSONResponse(content={"ok": True, **datos_sesion})
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
+        secure=es_https,
         samesite="lax",
         max_age=SESSION_MAX_AGE,
         path="/",
