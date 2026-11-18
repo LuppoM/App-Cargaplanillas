@@ -96,40 +96,31 @@ class LoginSchema(BaseModel):
 # ==========================================
 # 1. VISTAS HTML PRINCIPALES (RUTAS DIRECTAS)
 # ==========================================
-@app.get("/", response_class=HTMLResponse)
-def home(request: Request):
-    """Carga la pantalla principal de la aplicación."""
+@app.get("/login", response_class=HTMLResponse)
+def vista_login(request: Request):
+    """Carga la pantalla de ingreso."""
     return templates.TemplateResponse(request, "login.html", {})
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     """Carga la pantalla principal de la aplicación."""
     return templates.TemplateResponse(request, "principal.html", {})
-    
-
-
 
 @app.get("/Teoricos", response_class=HTMLResponse)
-def home(request: Request):
-    """Carga la pantalla principal de la aplicación."""
+def vista_teoricos(request: Request):
     return templates.TemplateResponse(request, "teoricos.html", {})
 
 @app.get("/sectores", response_class=HTMLResponse)
-def home(request: Request):
-    """Carga la pantalla principal de la aplicación."""
+def vista_sectores(request: Request):
     return templates.TemplateResponse(request, "sectores.html", {})
 
 @app.get("/planillas", response_class=HTMLResponse)
-def home(request: Request):
-    """Carga la pantalla principal de la aplicación."""
+def vista_planillas(request: Request):
     return templates.TemplateResponse(request, "planillas.html", {})
+
 @app.get("/ntanque", response_class=HTMLResponse)
-def home(request: Request):
-    """Carga la pantalla principal de la aplicación."""
+def vista_ntanque(request: Request):
     return templates.TemplateResponse(request, "nivelestanque.html", {})
-
-
-
 # ==========================================
 # 2. MÓDULO: TEÓRICOS (ENDPOINTS DE API)
 # ==========================================
