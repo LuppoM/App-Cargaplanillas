@@ -356,3 +356,10 @@ def borrar_relevamiento_tanque(relevamiento_id: int):
         return {"ok": True, "mensaje": "Relevamiento eliminado correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al borrar el relevamiento: {str(e)}")
+@app.get("/api/ntanque/codigos")
+def listar_codigos_tanques():
+    try:
+        datos = nivelestanquemodelo.obtener_codigos_tanques()
+        return {"ok": True, "datos": datos}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al consultar códigos: {str(e)}")
