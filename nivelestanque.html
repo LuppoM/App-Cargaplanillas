@@ -163,14 +163,6 @@
     </div>
 
 <script>
-    /**
-     * Maestro de los 14 tanques de Planta Chocolates.
-     * - altura_total_cm: altura total del tanque desde la regla/sensor (para sacar N/CM = altura_total_cm - valor_medido).
-     * - kg_por_cm: factor de conversión de centímetros de producto a kilogramos.
-     * - modo: 'vacio' (mide espacio vacío desde arriba: N/CM = altura_total - valor_medido)
-     *         'directo' (mide altura de producto desde abajo: N/CM = valor_medido)
-     *         'manual' (no usa regla, toma cantidad/kg manual)
-     */
     const CONFIG_TANQUES = [
         { tanque: "STK-MOVIL",           altura: 50,  capacidad: 650  },
         { tanque: "MUECAS",              altura: 201, capacidad: 5000 },
@@ -188,6 +180,67 @@
         { tanque: "laurico",             altura: 94,  capacidad: 3000 }
     ];
 
+    let relevamientosGlobales = [];
+    let catalogoCodigos = [];
+    let idSeleccionado = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await cargarCatalogoCodigos();
+        await cargarRelevamientos();
+    });
+
+    async function cargarCatalogoCodigos() {
+        try {
+            let res = await fetch('/api/ntanque/codigos');
+            if (!res.ok) {
+                res = await fetch('/api/teoricos');
+            }
+            if (res.ok) {
+                const json = await res.json();
+                const lista = json.datos || [];
+                const mapa = new Map();
+                lista.forEach(item => {
+                    const cod = String(item.codigo || '').trim();
+                    if (cod && !mapa.has(cod)) {
+                        mapa.set(cod, String(item.descripcion || '').trim());
+                    }
+                });
+                catalogoCodigos = Array.from(mapa, ([codigo, descripcion]) => ({ codigo, descripcion }));
+                actualizarDatalistCodigos();
+            }
+        } catch (err) {
+            console.error("Error al cargar catálogo de códigos:", err);
+        }
+    }
+
+    function actualizarDatalistCodigos() {
+        let dl = document.getElementById('datalist-codigos-tanques');
+        if (!dl) {
+            dl = document.createElement('datalist');
+            dl.id = 'datalist-codigos-tanques';
+            document.body.appendChild(dl);
+        }
+        dl.innerHTML = catalogoCodigos
+            .map(c => `<option value="${c.codigo}">${c.descripcion}</option>`)
+            .join('');
+    }
+
+    function buscarDescripcionPorCodigo(inputCodigo) {
+        const tr = inputCodigo.closest('tr');
+        const inputDesc = tr.querySelector('.inp-desc');
+        const cod = String(inputCodigo.value || '').trim().toLowerCase();
+
+        if (!cod) {
+            inputDesc.value = '';
+            return;
+        }
+
+        const encontrado = catalogoCodigos.find(c => c.codigo.toLowerCase() === cod);
+        if (encontrado) {
+            inputDesc.value = encontrado.descripcion || '';
+        }
+    }
+
     function calcularFilaTanque(cfg, valorMedido, nroConca, kgManual) {
         const tieneValor = valorMedido !== null && valorMedido !== "" && !isNaN(parseFloat(valorMedido));
         const val = tieneValor ? parseFloat(valorMedido) : null;
@@ -202,11 +255,10 @@
             nPct = Math.min(100, Math.max(0, (nCm / cfg.altura) * 100));
             cantidad = (cfg.capacidad / cfg.altura) * nCm;
         } else if (kgMan > 0 && cfg.capacidad > 0) {
-            // Para tanques sin altura (ej. blanco con capacidad 1000 kg) calcula % visual según capacidad
             nPct = Math.min(100, Math.max(0, (kgMan / cfg.capacidad) * 100));
         }
 
-        const total = cantidad + kgMan;
+        const total = kgMan > 0 ? kgMan : cantidad;
 
         return {
             nCm: nCm !== null ? Math.round(nCm) : null,
@@ -219,12 +271,11 @@
 
     async function cargarRelevamientos() {
         try {
-            const res = await fetch('/api/nivelestanque');
+            const res = await fetch('/api/ntanque');
             const json = await res.json();
             relevamientosGlobales = json.datos || [];
             renderizarTablaPrincipal();
 
-            // Si hay relevamientos, cargar el más reciente en la Sala de Tanques visual
             if (relevamientosGlobales.length > 0) {
                 const ultimoId = idSeleccionado || relevamientosGlobales[0].id;
                 await cargarDetalleEnSala(ultimoId);
@@ -282,7 +333,7 @@
 
     async function cargarDetalleEnSala(id) {
         try {
-            const res = await fetch(`/api/nivelestanque/${id}`);
+            const res = await fetch(`/api/ntanque/${id}`);
             if (!res.ok) return;
             const json = await res.json();
             const reg = json.datos;
@@ -316,7 +367,7 @@
                         ${calc.total > 0 ? `<span class="tanque-kg-interno">${calc.total.toLocaleString('es-AR')}</span>` : ''}
                     </div>
                 </div>
-                <div class="tanque-nombre-label" title="${det.descripcion || cfg.desc_def}">${cfg.tanque}</div>
+                <div class="tanque-nombre-label" title="${det.descripcion || ''}">${cfg.tanque}</div>
             `;
             grid.appendChild(col);
         });
@@ -328,17 +379,18 @@
 
         CONFIG_TANQUES.forEach((cfg, idx) => {
             const det = detallesExistentes.find(d => d.tanque.toLowerCase().trim() === cfg.tanque.toLowerCase().trim()) || {};
-            const codigoVal = det.codigo !== undefined && det.codigo !== null ? det.codigo : cfg.codigo_def;
-            const descVal = det.descripcion !== undefined && det.descripcion !== null ? det.descripcion : cfg.desc_def;
-            const medidoVal = det.valor_medido !== undefined && det.valor_medido !== null ? det.valor_medido : '';
-            const concaVal = det.nro_conca !== undefined && det.nro_conca !== null ? det.nro_conca : '';
-            const kgManVal = det.kg_manual !== undefined && det.kg_manual !== null ? det.kg_manual : '';
+            const codigoVal = det.codigo ? String(det.codigo).trim() : '';
+            const encontrado = catalogoCodigos.find(c => c.codigo.toLowerCase() === codigoVal.toLowerCase());
+            const descVal = det.descripcion ? String(det.descripcion).trim() : (encontrado ? encontrado.descripcion : '');
+            const medidoVal = (det.valor_medido !== undefined && det.valor_medido !== null) ? det.valor_medido : '';
+            const concaVal = (det.nro_conca !== undefined && det.nro_conca !== null) ? det.nro_conca : '';
+            const kgManVal = (det.kg_manual !== undefined && det.kg_manual !== null) ? det.kg_manual : '';
 
             const tr = document.createElement('tr');
             tr.dataset.index = idx;
             tr.innerHTML = `
                 <td class="celda-tk"><strong>${cfg.tanque}</strong></td>
-                <td><input type="text" class="inp-tabla inp-cod" value="${codigoVal}" placeholder="-"></td>
+                <td><input type="text" list="datalist-codigos-tanques" class="inp-tabla inp-cod" value="${codigoVal}" placeholder="-" oninput="buscarDescripcionPorCodigo(this)" onchange="buscarDescripcionPorCodigo(this)"></td>
                 <td><input type="text" class="inp-tabla inp-desc" value="${descVal}" placeholder="-"></td>
                 <td><input type="number" step="0.01" class="inp-tabla inp-medido" value="${medidoVal}" placeholder="-" oninput="recalcularTablaModal()"></td>
                 <td class="celda-calc celda-ncm">-</td>
@@ -395,13 +447,32 @@
         return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
     }
 
-    function abrirFormulario() {
+    async function abrirFormulario() {
         document.getElementById('form-tanques').reset();
         document.getElementById('relevamiento-id').value = '';
         document.getElementById('fecha_hora').value = obtenerFechaHoraActualLocal();
         document.getElementById('modal-titulo').innerText = 'Nuevo Relevamiento de Tanques';
 
-        construirFilasModal([]);
+        if (catalogoCodigos.length === 0) {
+            await cargarCatalogoCodigos();
+        }
+
+        let detallesBase = [];
+        if (relevamientosGlobales.length > 0) {
+            try {
+                const resUlt = await fetch(`/api/ntanque/${relevamientosGlobales[0].id}`);
+                if (resUlt.ok) {
+                    const jsonUlt = await resUlt.json();
+                    detallesBase = (jsonUlt.datos?.detalles || []).map(d => ({
+                        tanque: d.tanque,
+                        codigo: d.codigo || '',
+                        descripcion: d.descripcion || ''
+                    }));
+                }
+            } catch (_) {}
+        }
+
+        construirFilasModal(detallesBase);
         document.getElementById('modal-tanques').style.display = 'flex';
     }
 
@@ -412,7 +483,11 @@
         }
 
         try {
-            const res = await fetch(`/api/nivelestanque/${idSeleccionado}`);
+            if (catalogoCodigos.length === 0) {
+                await cargarCatalogoCodigos();
+            }
+
+            const res = await fetch(`/api/ntanque/${idSeleccionado}`);
             if (!res.ok) throw new Error("No se pudo cargar el relevamiento");
             const json = await res.json();
             const reg = json.datos;
@@ -478,7 +553,7 @@
         };
 
         const esEdicion = Boolean(idEdit);
-        const url = esEdicion ? `/api/nivelestanque/${idEdit}` : '/api/nivelestanque';
+        const url = esEdicion ? `/api/ntanque/${idEdit}` : '/api/ntanque';
         const metodo = esEdicion ? 'PUT' : 'POST';
 
         try {
@@ -509,7 +584,7 @@
         if (!confirm(`¿Seguro que desea eliminar el relevamiento #${idSeleccionado}?`)) return;
 
         try {
-            const res = await fetch(`/api/nivelestanque/${idSeleccionado}`, { method: 'DELETE' });
+            const res = await fetch(`/api/ntanque/${idSeleccionado}`, { method: 'DELETE' });
             if (res.ok) {
                 idSeleccionado = null;
                 await cargarRelevamientos();
@@ -523,7 +598,7 @@
 
     async function verDetalleRelevamiento(id) {
         try {
-            const res = await fetch(`/api/nivelestanque/${id}`);
+            const res = await fetch(`/api/ntanque/${id}`);
             if (!res.ok) return;
             const json = await res.json();
             const reg = json.datos;
@@ -543,8 +618,8 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><strong>${cfg.tanque}</strong></td>
-                    <td>${det.codigo || cfg.codigo_def || '-'}</td>
-                    <td>${det.descripcion || cfg.desc_def || '-'}</td>
+                    <td>${det.codigo || '-'}</td>
+                    <td>${det.descripcion || '-'}</td>
                     <td>${det.valor_medido !== null && det.valor_medido !== undefined ? det.valor_medido : '-'}</td>
                     <td class="celda-calc">${calc.nCm !== null ? calc.nCm : '-'}</td>
                     <td class="celda-calc">${calc.nCm !== null ? calc.nPct + '%' : '-'}</td>
@@ -570,7 +645,7 @@
 
     function aplicarFiltros() {
         const texto = document.getElementById('input-buscar').value.toLowerCase().trim();
-        const fecha = document.getElementById('filtro-fecha').value; // YYYY-MM-DD
+        const fecha = document.getElementById('filtro-fecha').value;
         let fechaFormateada = '';
         if (fecha) {
             const [y, m, d] = fecha.split('-');
