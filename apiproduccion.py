@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel  # <-- AGREGAR para la validación de planillas
 from fastapi.responses import StreamingResponse
-from nivelestanquepdf import generar_pdf_relevamiento
+import nivelestanquepdf
 import conexion
 from teoricosmodelo import TeoricosModelo
 from sectoresmodelo import SectoresModelo
@@ -317,12 +317,34 @@ def listar_relevamientos_tanques():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar relevamientos: {str(e)}")
 
+@app.get("/api/ntanque/codigos")
+def listar_codigos_tanques():
+    try:
+        datos = nivelestanquemodelo.obtener_codigos_tanques()
+        return {"ok": True, "datos": datos}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al consultar códigos: {str(e)}")
+
 @app.get("/api/ntanque/{relevamiento_id}")
 def obtener_relevamiento_tanque(relevamiento_id: int):
     registro = nivelestanquemodelo.obtener_relevamiento_por_id(relevamiento_id)
     if not registro:
         raise HTTPException(status_code=404, detail="Relevamiento de tanques no encontrado")
     return {"ok": True, "datos": registro}
+
+@app.get("/api/ntanque/{relevamiento_id}/pdf")
+def imprimir_relevamiento_tanques(relevamiento_id: int):
+    reg = nivelestanquemodelo.obtener_relevamiento_por_id(relevamiento_id)
+    if not reg:
+        raise HTTPException(status_code=404, detail="Relevamiento no encontrado")
+
+    pdf_buffer = nivelestanquepdf.generar_pdf_relevamiento(reg)
+    filename = f"Planilla_Tanques_{relevamiento_id}.pdf"
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
 
 @app.post("/api/ntanque")
 def crear_relevamiento_tanque(payload: RelevamientoTanqueSchema):
@@ -357,23 +379,3 @@ def borrar_relevamiento_tanque(relevamiento_id: int):
         return {"ok": True, "mensaje": "Relevamiento eliminado correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al borrar el relevamiento: {str(e)}")
-@app.get("/api/ntanque/codigos")
-def listar_codigos_tanques():
-    try:
-        datos = nivelestanquemodelo.obtener_codigos_tanques()
-        return {"ok": True, "datos": datos}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al consultar códigos: {str(e)}")
-@app.get("/api/ntanque/{relevamiento_id}/pdf")
-def imprimir_relevamiento_tanques(relevamiento_id: int):
-    reg = generar_pdf_relevamiento(relevamiento_id)
-    if not reg:
-        raise HTTPException(status_code=404, detail="Relevamiento no encontrado")
-
-    pdf_buffer = generar_pdf_relevamiento(reg)
-    filename = f"Planilla_Tanques_{relevamiento_id}.pdf"
-    return StreamingResponse(
-        pdf_buffer,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{filename}"'},
-    )
