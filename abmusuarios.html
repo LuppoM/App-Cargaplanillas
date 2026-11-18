@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ABM Usuarios - Sistema de Producción</title>
+
+    <link rel="icon" type="image/x-icon" href="/static/icono.ico
+    <link rel="stylesheet" href="/static/abmusuariosvista.css">
+
+    <script>
+        // Bloquea acceso si no hay sesión o si el rol no es admin
+        const sesionRaw = sessionStorage.getItem('usuario_sesion');
+        if (!sesionRaw) {
+            window.location.replace('/login');
+        }
+        const usuarioActual = sesionRaw ? JSON.parse(sesionRaw) : null;
+        if (usuarioActual && (usuarioActual.rol || '').toLowerCase() !== 'admin') {
+            window.location.replace('/');
+        }
+    </script>
+</head>
+<body>
+
+    <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
+    <div class="top-bar">
+        <div class="nav-container">
+            <a href="/" class="nav-btn">INICIO</a>
+            <a href="/Teoricos" class="nav-btn">TEÓRICOS</a>
+            <a href="/ntanque" class="nav-btn">NIVELES DE TANQUE</a>
+            <button class="nav-btn" onclick="window.location.href='/planillas'">CARGA PLANILLAS</button>
+
+            <div class="dropdown">
+                <button class="nav-btn" onclick="toggleDropdown(event, 'menuParametros')">
+                    PARÁMETROS ▼
+                </button>
+                <div id="menuParametros" class="dropdown-menu">
+                    <a href="/sectores">Sectores</a>
+                    <a href="/usuarios">Usuarios</a>
+                </div>
+            </div>
+
+            <button type="button" onclick="cerrarSesion()" class="nav-btn btn-salir">SALIR</button>
+        </div>
+
+        <span id="info-usuario" class="usuario-badge"></span>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main class="abm-container">
+        <div class="abm-card">
+            <div class="abm-header">
+                <div>
+                    <h1>Gestión de Usuarios</h1>
+                    <p class="abm-subtitulo">Administración de accesos, contraseñas y permisos por sector</p>
+                </div>
+                <button type="button" id="btn-nuevo-usuario" class="btn-primario">
+                    + Nuevo Usuario
+                </button>
+            </div>
+
+            <!-- BARRA DE FILTRO -->
+            <div class="abm-toolbar">
+                <input type="text" id="input-buscar" class="input-buscar" placeholder="Buscar por usuario o rol...">
+                <span id="contador-registros" class="contador-registros">0 usuarios</span>
+            </div>
+
+            <!-- MENSAJES DE ESTADO -->
+            <div id="alerta-global" class="alerta" hidden></div>
+
+            <!-- TABLA DE USUARIOS -->
+            <div class="tabla-wrapper">
+                <table class="tabla-usuarios">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuario</th>
+                            <th>Contraseña</th>
+                            <th>Rol</th>
+                            <th>Estado</th>
+                            <th class="col-acciones">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-usuarios">
+                        <tr>
+                            <td colspan="6" class="texto-centro">Cargando usuarios...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL CREAR / EDITAR USUARIO -->
+    <div id="modal-usuario" class="modal-overlay" hidden>
+        <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+            <div class="modal-header">
+                <h2 id="modal-titulo">Nuevo Usuario</h2>
+                <button type="button" id="btn-cerrar-modal" class="btn-cerrar-x" aria-label="Cerrar">&times;</button>
+            </div>
+
+            <form id="form-usuario" autocomplete="off">
+                <input type="hidden" id="usuario-id">
+
+                <div class="campo-grupo">
+                    <label for="campo-usuario">Nombre de Usuario *</label>
+                    <input type="text" id="campo-usuario" required placeholder="Ej: jperez">
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="campo-clave" id="label-clave">Contraseña *</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="campo-clave" placeholder="Ingresá la contraseña">
+                        <button type="button" id="btn-toggle-clave" class="btn-toggle-pass" title="Ver contraseña">
+                            <svg id="icono-ojo" xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                    <small id="ayuda-clave" class="texto-ayuda" hidden>Dejá este campo vacío si no querés cambiar la contraseña actual.</small>
+                </div>
+
+                <div class="campo-grupo">
+                    <label for="campo-rol">Rol / Permisos *</label>
+                    <select id="campo-rol" required>
+                        <option value="">Seleccioná un rol...</option>
+                        <option value="admin">admin (Acceso total + Parámetros)</option>
+                        <option value="chocolate">chocolate (Tanques + Planillas)</option>
+                        <option value="golosinas">golosinas (Solo Carga Planillas)</option>
+                    </select>
+                </div>
+
+                <div class="campo-grupo campo-checkbox">
+                    <label class="switch-label">
+                        <input type="checkbox" id="campo-activo" checked>
+                        <span>Usuario activo</span>
+                    </label>
+                </div>
+
+                <div id="error-modal" class="alerta alerta-error" hidden></div>
+
+                <div class="modal-footer">
+                    <button type="button" id="btn-cancelar-modal" class="btn-secundario">Cancelar</button>
+                    <button type="submit" id="btn-guardar-usuario" class="btn-primario">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let listaUsuarios = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (usuarioActual) {
+                const spanUser = document.getElementById('info-usuario');
+                if (spanUser) spanUser.textContent = `Usuario: ${usuarioActual.usuario}`;
+            }
+
+            cargarUsuarios();
+
+            // Eventos UI
+            document.getElementById('btn-nuevo-usuario').addEventListener('click', abrirModalNuevo);
+            document.getElementById('btn-cerrar-modal').addEventListener('click', cerrarModal);
+            document.getElementById('btn-cancelar-modal').addEventListener('click', cerrarModal);
+            document.getElementById('form-usuario').addEventListener('submit', guardarUsuario);
+            document.getElementById('input-buscar').addEventListener('input', filtrarTabla);
+
+            // Mostrar / ocultar contraseña en el modal
+            const inpClave = document.getElementById('campo-clave');
+            const btnOjo = document.getElementById('btn-toggle-clave');
+            const iconoOjo = document.getElementById('icono-ojo');
+
+            btnOjo.addEventListener('click', () => {
+                const esPass = inpClave.type === 'password';
+                inpClave.type = esPass ? 'text' : 'password';
+                btnOjo.title = esPass ? 'Ocultar contraseña' : 'Ver contraseña';
+                iconoOjo.innerHTML = esPass
+                    ? `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`
+                    : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+            });
+
+            // Cerrar modal al hacer clic fuera de la caja
+            document.getElementById('modal-usuario').addEventListener('click', (e) => {
+                if (e.target.id === 'modal-usuario') cerrarModal();
+            });
+        });
+
+        async function cargarUsuarios() {
+            const tbody = document.getElementById('tbody-usuarios');
+            try {
+                const resp = await fetch('/api/usuarios');
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    throw new Error(data.detail || 'Error al obtener usuarios');
+                }
+
+                listaUsuarios = data.datos || [];
+                renderizarTabla(listaUsuarios);
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" class="texto-centro texto-error">${err.message}</td></tr>`;
+            }
+        }
+
+        function renderizarTabla(datos) {
+            const tbody = document.getElementById('tbody-usuarios');
+            const contador = document.getElementById('contador-registros');
+            contador.textContent = `${datos.length} usuario${datos.length === 1 ? '' : 's'}`;
+
+            if (!datos.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="texto-centro">No se encontraron usuarios.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = datos.map(u => {
+                const esActivo = u.activo !== false;
+                const badgeRol = `<span class="badge badge-rol-${escaparHtml(u.rol)}">${escaparHtml(u.rol)}</span>`;
+                const badgeEstado = esActivo
+                    ? `<span class="badge badge-activo">Activo</span>`
+                    : `<span class="badge badge-inactivo">Inactivo</span>`;
+
+                return `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td><strong>${escaparHtml(u.usuario)}</strong></td>
+                        <td class="celda-clave">
+                            <span class="clave-oculta" data-clave="${escaparHtml(u.password_hash || '')}">••••••••</span>
+                            <button type="button" class="btn-mini-ojo" onclick="toggleClaveFila(this)" title="Ver / Ocultar clave">👁</button>
+                        </td>
+                        <td>${badgeRol}</td>
+                        <td>${badgeEstado}</td>
+                        <td class="col-acciones">
+                            <button type="button" class="btn-accion btn-editar" onclick="abrirModalEditar(${u.id})">Editar</button>
+                            <button type="button" class="btn-accion btn-eliminar" onclick="eliminarUsuario(${u.id}, '${escaparHtml(u.usuario)}')">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleClaveFila(btn) {
+            const span = btn.previousElementSibling;
+            const visible = span.dataset.visible === 'true';
+            if (visible) {
+                span.textContent = '••••••••';
+                span.dataset.visible = 'false';
+            } else {
+                span.textContent = span.dataset.clave;
+                span.dataset.visible = 'true';
+            }
+        }
+
+        function filtrarTabla() {
+            const q = document.getElementById('input-buscar').value.trim().toLowerCase();
+            if (!q) {
+                renderizarTabla(listaUsuarios);
+                return;
+            }
+            const filtrados = listaUsuarios.filter(u =>
+                (u.usuario || '').toLowerCase().includes(q) ||
+                (u.rol || '').toLowerCase().includes(q)
+            );
+            renderizarTabla(filtrados);
+        }
+
+        function abrirModalNuevo() {
+            document.getElementById('modal-titulo').textContent = 'Nuevo Usuario';
+            document.getElementById('usuario-id').value = '';
+            document.getElementById('campo-usuario').value = '';
+            document.getElementById('campo-clave').value = '';
+            document.getElementById('campo-clave').type = 'password';
+            document.getElementById('campo-clave').required = true;
+            document.getElementById('label-clave').textContent = 'Contraseña *';
+            document.getElementById('ayuda-clave').hidden = true;
+            document.getElementById('campo-rol').value = '';
+            document.getElementById('campo-activo').checked = true;
+            ocultarErrorModal();
+
+            document.getElementById('modal-usuario').hidden = false;
+            document.getElementById('campo-usuario').focus();
+        }
+
+        function abrirModalEditar(id) {
+            const user = listaUsuarios.find(u => u.id === id);
+            if (!user) return;
+
+            document.getElementById('modal-titulo').textContent = `Editar Usuario #${user.id}`;
+            document.getElementById('usuario-id').value = user.id;
+            document.getElementById('campo-usuario').value = user.usuario || '';
+            document.getElementById('campo-clave').value = '';
+            document.getElementById('campo-clave').type = 'password';
+            document.getElementById('campo-clave').required = false;
+            document.getElementById('label-clave').textContent = 'Nueva Contraseña (opcional)';
+            document.getElementById('ayuda-clave').hidden = false;
+            document.getElementById('campo-rol').value = (user.rol || '').toLowerCase();
+            document.getElementById('campo-activo').checked = user.activo !== false;
+            ocultarErrorModal();
+
+            document.getElementById('modal-usuario').hidden = false;
+            document.getElementById('campo-usuario').focus();
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal-usuario').hidden = true;
+        }
+
+        async function guardarUsuario(e) {
+            e.preventDefault();
+            ocultarErrorModal();
+
+            const id = document.getElementById('usuario-id').value;
+            const usuario = document.getElementById('campo-usuario').value.trim();
+            const clave = document.getElementById('campo-clave').value.trim();
+            const rol = document.getElementById('campo-rol').value;
+            const activo = document.getElementById('campo-activo').checked;
+
+            if (!usuario || !rol) {
+                mostrarErrorModal('Completá el usuario y el rol.');
+                return;
+            }
+            if (!id && !clave) {
+                mostrarErrorModal('Ingresá una contraseña para el nuevo usuario.');
+                return;
+            }
+
+            const btnGuardar = document.getElementById('btn-guardar-usuario');
+            btnGuardar.disabled = true;
+            btnGuardar.textContent = 'Guardando...';
+
+            try {
+                const url = id ? `/api/usuarios/${id}` : '/api/usuarios';
+                const method = id ? 'PUT' : 'POST';
+
+                const resp = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usuario, clave, rol, activo })
+                });
+
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.detail || 'No se pudo guardar el usuario.');
+                }
+
+                cerrarModal();
+                mostrarAlerta(data.message || 'Usuario guardado correctamente.', 'exito');
+                await cargarUsuarios();
+            } catch (err) {
+                mostrarErrorModal(err.message);
+            } finally {
+                btnGuardar.disabled = false;
+                btnGuardar.textContent = 'Guardar';
+            }
+        }
+
+        async function eliminarUsuario(id, nombre) {
+            if (usuarioActual && Number(usuarioActual.id) === Number(id)) {
+                mostrarAlerta('No podés eliminar tu propio usuario con sesión activa.', 'error');
+                return;
+            }
+
+            if (!confirm(`¿Seguro que querés eliminar el usuario "${nombre}"? Esta acción no se puede deshacer.`)) {
+                return;
+            }
+
+            try {
+                const resp = await fetch(`/api/usuarios/${id}`, { method: 'DELETE' });
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    throw new Error(data.detail || 'No se pudo eliminar el usuario.');
+                }
+
+                mostrarAlerta(data.message || 'Usuario eliminado.', 'exito');
+                await cargarUsuarios();
+            } catch (err) {
+                mostrarAlerta(err.message, 'error');
+            }
+        }
+
+        function mostrarAlerta(texto, tipo = 'exito') {
+            const box = document.getElementById('alerta-global');
+            box.textContent = texto;
+            box.className = `alerta ${tipo === 'error' ? 'alerta-error' : 'alerta-exito'}`;
+            box.hidden = false;
+            setTimeout(() => { box.hidden = true; }, 4500);
+        }
+
+        function mostrarErrorModal(texto) {
+            const box = document.getElementById('error-modal');
+            box.textContent = texto;
+            box.hidden = false;
+        }
+
+        function ocultarErrorModal() {
+            document.getElementById('error-modal').hidden = true;
+        }
+
+        function escaparHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function cerrarSesion() {
+            sessionStorage.removeItem('usuario_sesion');
+            window.location.replace('/login');
+        }
+
+        function toggleDropdown(event, menuId) {
+            event.stopPropagation();
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                if (menu.id !== menuId) menu.classList.remove('show');
+            });
+            const menu = document.getElementById(menuId);
+            if (menu) menu.classList.toggle('show');
+        }
+
+        window.addEventListener('click', () => {
+            document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.remove('show'));
+        });
+    </script>
+</body>
+</html>

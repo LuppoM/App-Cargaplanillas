@@ -8,6 +8,27 @@
     <link rel="icon" type="image/x-icon" href="/static/icono.ico">
     <link rel="stylesheet" href="/static/principalvista.css">
 
+    <style>
+        .top-bar {
+            position: relative;
+        }
+        .usuario-badge {
+            position: absolute;
+            right: 22px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            background: rgba(0, 0, 0, 0.22);
+            padding: 6px 12px;
+            border-radius: 6px;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+    </style>
+
     <script>
         // Bloquea acceso si no hay sesión iniciada
         const sesionRaw = sessionStorage.getItem('usuario_sesion');
@@ -35,14 +56,15 @@
                 </button>
                 <div id="menuParametros" class="dropdown-menu">
                     <a href="/sectores">Sectores</a>
+                    <a href="/usuarios">Usuarios</a>
                 </div>
             </div>
-
-            <span id="info-usuario" class="nav-btn" style="cursor: default; opacity: 0.9;"></span>
 
             <button type="button" onclick="cerrarSesion()" class="nav-btn btn-salir">SALIR</button>
 
         </div>
+
+        <span id="info-usuario" class="usuario-badge"></span>
     </div>
 
     <!-- CONTENEDOR PRINCIPAL / DASHBOARD -->
@@ -59,10 +81,10 @@
 
             const rol = (usuarioActual.rol || '').toLowerCase();
 
-            // Muestra usuario y rol en la barra y en el saludo
+            // Muestra usuario como etiqueta arriba a la derecha (sin rol entre los botones)
             const spanUser = document.getElementById('info-usuario');
             if (spanUser) {
-                spanUser.textContent = `${usuarioActual.usuario.toUpperCase()} (${rol.toUpperCase()})`;
+                spanUser.textContent = `Usuario: ${usuarioActual.usuario}`;
             }
 
             const bienvenida = document.getElementById('bienvenida-texto');
