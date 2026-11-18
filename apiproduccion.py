@@ -442,3 +442,13 @@ def login(payload: LoginSchema):
         "usuario": user["usuario"],
         "rol": user["rol"],
     }
+
+@app.get("/api/test-db")
+def test_db():
+    with conexion.obtener_conexion() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT current_database(), current_schema()")
+            db_info = cur.fetchone()
+            cur.execute("SELECT id, usuario, password_hash, rol, activo FROM usuarios")
+            filas = cur.fetchall()
+            return {"db": db_info, "usuarios": filas}
