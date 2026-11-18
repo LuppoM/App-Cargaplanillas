@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel  # <-- AGREGAR para la validación de planillas
 from fastapi.responses import StreamingResponse
 import nivelestanquepdf
+from nivelestanquepdf import generar_pdf_planilla_blanca
 import conexion
 from teoricosmodelo import TeoricosModelo
 from sectoresmodelo import SectoresModelo
@@ -325,57 +326,18 @@ def listar_codigos_tanques():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar códigos: {str(e)}")
 
+@app.get("/api/ntanque/pdf/blanco")
+def imprimir_planilla_tanques_blanca():
+    pdf_buffer = generar_pdf_planilla_blanca()
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'inline; filename="Planilla_Tanques_Blanco.pdf"'},
+    )
+
 @app.get("/api/ntanque/{relevamiento_id}")
 def obtener_relevamiento_tanque(relevamiento_id: int):
     registro = nivelestanquemodelo.obtener_relevamiento_por_id(relevamiento_id)
     if not registro:
         raise HTTPException(status_code=404, detail="Relevamiento de tanques no encontrado")
     return {"ok": True, "datos": registro}
-
-@app.get("/api/ntanque/{relevamiento_id}/pdf")
-def imprimir_relevamiento_tanques(relevamiento_id: int):
-    reg = nivelestanquemodelo.obtener_relevamiento_por_id(relevamiento_id)
-    if not reg:
-        raise HTTPException(status_code=404, detail="Relevamiento no encontrado")
-
-    pdf_buffer = nivelestanquepdf.generar_pdf_relevamiento(reg)
-    filename = f"Planilla_Tanques_{relevamiento_id}.pdf"
-    return StreamingResponse(
-        pdf_buffer,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{filename}"'},
-    )
-
-@app.post("/api/ntanque")
-def crear_relevamiento_tanque(payload: RelevamientoTanqueSchema):
-    try:
-        datos_dict = payload.model_dump() if hasattr(payload, 'model_dump') else payload.dict()
-        nuevo_id = nivelestanquemodelo.insertar_relevamiento(datos_dict)
-        return {"ok": True, "id": nuevo_id, "mensaje": "Relevamiento registrado correctamente"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al guardar el relevamiento: {str(e)}")
-
-@app.put("/api/ntanque/{relevamiento_id}")
-def modificar_relevamiento_tanque(relevamiento_id: int, payload: RelevamientoTanqueSchema):
-    registro = nivelestanquemodelo.obtener_relevamiento_por_id(relevamiento_id)
-    if not registro:
-        raise HTTPException(status_code=404, detail="El relevamiento a actualizar no existe")
-
-    try:
-        datos_dict = payload.model_dump() if hasattr(payload, 'model_dump') else payload.dict()
-        nivelestanquemodelo.actualizar_relevamiento(relevamiento_id, datos_dict)
-        return {"ok": True, "mensaje": "Relevamiento actualizado correctamente"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al actualizar el relevamiento: {str(e)}")
-
-@app.delete("/api/ntanque/{relevamiento_id}")
-def borrar_relevamiento_tanque(relevamiento_id: int):
-    registro = nivelestanquemodelo.obtener_relevamiento_por_id(relevamiento_id)
-    if not registro:
-        raise HTTPException(status_code=404, detail="El relevamiento a eliminar no existe")
-
-    try:
-        nivelestanquemodelo.eliminar_relevamiento(relevamiento_id)
-        return {"ok": True, "mensaje": "Relevamiento eliminado correctamente"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al borrar el relevamiento: {str(e)}")
