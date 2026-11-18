@@ -5,53 +5,85 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SISTEMA DE PRODUCCIÓN - CARGA DE PLANILLAS</title>
 
-    <!-- Ícono ti aplicación -->
     <link rel="icon" type="image/x-icon" href="/static/icono.ico">
-
-    <!-- CSS ubicado en la carpeta static -->
     <link rel="stylesheet" href="/static/principalvista.css">
+
+    <script>
+        // Bloquea acceso si no hay sesión iniciada
+        const sesionRaw = sessionStorage.getItem('usuario_sesion');
+        if (!sesionRaw) {
+            window.location.replace('/login');
+        }
+        const usuarioActual = sesionRaw ? JSON.parse(sesionRaw) : null;
+    </script>
 </head>
 <body>
 
     <div class="top-bar">
-    <div class="nav-container">
+        <div class="nav-container">
 
-        <!-- En principal.html -->
-        <a href="/Teoricos" class="nav-btn">TEÓRICOS</a>
-        <!-- En principal.html -->
-        <a href="/ntanque" class="nav-btn">NIVELES DE TANQUE</a>
+            <a href="/Teoricos" class="nav-btn" data-roles="admin">TEÓRICOS</a>
+            <a href="/ntanque" class="nav-btn" data-roles="admin,chocolate">NIVELES DE TANQUE</a>
 
-        <!-- 2. MENÚ DESPLEGABLE: CARGA PLANILLAS -->
-        <button class="nav-btn" onclick="window.location.href='/planillas'">
-            CARGA PLANILLAS
-        </button>
-
-        <!-- 3. MENÚ DESPLEGABLE: PARÁMETROS -->
-        <div class="dropdown">
-            <button class="nav-btn" onclick="toggleDropdown(event, 'menuParametros')">
-                PARÁMETROS ▼
+            <button class="nav-btn" data-roles="admin,chocolate,golosinas" onclick="window.location.href='/planillas'">
+                CARGA PLANILLAS
             </button>
-            <div id="menuParametros" class="dropdown-menu">
-                <a href="/sectores">Sectores</a>
+
+            <div class="dropdown" data-roles="admin">
+                <button class="nav-btn" onclick="toggleDropdown(event, 'menuParametros')">
+                    PARÁMETROS ▼
+                </button>
+                <div id="menuParametros" class="dropdown-menu">
+                    <a href="/sectores">Sectores</a>
+                </div>
             </div>
+
+            <span id="info-usuario" class="nav-btn" style="cursor: default; opacity: 0.9;"></span>
+
+            <button type="button" onclick="cerrarSesion()" class="nav-btn btn-salir">SALIR</button>
+
         </div>
-
-        <!-- 4. BOTÓN DIRECTO: SALIR -->
-        <a href="/" class="nav-btn btn-salir">SALIR</a>
-
     </div>
-</div>
-
 
     <!-- CONTENEDOR PRINCIPAL / DASHBOARD -->
     <main class="content-container">
         <div class="welcome-card">
             <h2>Sistema de Gestión de Producción</h2>
-            <p>Seleccione una opción del menú superior para comenzar.</p>
+            <p id="bienvenida-texto">Seleccione una opción del menú superior para comenzar.</p>
         </div>
     </main>
 
     <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!usuarioActual) return;
+
+            const rol = (usuarioActual.rol || '').toLowerCase();
+
+            // Muestra usuario y rol en la barra y en el saludo
+            const spanUser = document.getElementById('info-usuario');
+            if (spanUser) {
+                spanUser.textContent = `${usuarioActual.usuario.toUpperCase()} (${rol.toUpperCase()})`;
+            }
+
+            const bienvenida = document.getElementById('bienvenida-texto');
+            if (bienvenida) {
+                bienvenida.textContent = `Bienvenido, ${usuarioActual.usuario}. Seleccione una opción del menú superior para comenzar.`;
+            }
+
+            // Oculta botones según el rol del usuario
+            document.querySelectorAll('[data-roles]').forEach(el => {
+                const permitidos = el.dataset.roles.split(',').map(r => r.trim().toLowerCase());
+                if (!permitidos.includes(rol)) {
+                    el.style.display = 'none';
+                }
+            });
+        });
+
+        function cerrarSesion() {
+            sessionStorage.removeItem('usuario_sesion');
+            window.location.replace('/login');
+        }
+
         // Función para abrir / cerrar desplegables
         function toggleDropdown(event, menuId) {
             event.stopPropagation();

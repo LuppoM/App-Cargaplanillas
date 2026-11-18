@@ -433,8 +433,10 @@ def borrar_relevamiento_tanque(relevamiento_id: int):
 
 # --- ENDPOINTS USUARIOS Y SESIÓN ---
 
+# --- ENDPOINTS USUARIOS ---
+
 @app.post("/api/login")
-def login(request: Request, payload: LoginSchema):
+def login(payload: LoginSchema):
     try:
         user = usuariosmodelo.validar_usuario(payload.usuario, payload.clave)
     except Exception as e:
@@ -443,42 +445,9 @@ def login(request: Request, payload: LoginSchema):
     if not user:
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
 
-    datos_sesion = {
+    return {
+        "ok": True,
         "id": user["id"],
         "usuario": user["usuario"],
         "rol": user["rol"],
     }
-    token = signer.dumps(datos_sesion)
-
-    es_https = (
-        request.url.scheme == "https"
-        or request.headers.get("x-forwarded-proto") == "https"
-        or "vercel.app" in str(request.base_url)
-    )
-
-    response = JSONResponse(content={"ok": True, **datos_sesion})
-    response.set_cookie(
-        key=COOKIE_NAME,
-        value=token,
-        httponly=True,
-        secure=es_https,
-        samesite="lax",
-        max_age=SESSION_MAX_AGE,
-        path="/",
-    )
-    return response
-
-
-@app.post("/api/logout")
-def logout():
-    response = JSONResponse(content={"ok": True})
-    response.delete_cookie(key=COOKIE_NAME, path="/")
-    return response
-
-
-@app.get("/api/me")
-def usuario_actual(request: Request):
-    user = obtener_usuario_actual(request)
-    if not user:
-        raise HTTPException(status_code=401, detail="Sesión no iniciada o expirada")
-    return {"ok": True, **user}

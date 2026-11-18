@@ -25,6 +25,10 @@
     </main>
 
     <script>
+        if (sessionStorage.getItem('usuario_sesion')) {
+            window.location.replace('/');
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('form-login');
             const inpUsuario = document.getElementById('usuario');
@@ -67,6 +71,12 @@
                         btnIngresar.textContent = 'Ingresar';
                         return;
                     }
+
+                    sessionStorage.setItem('usuario_sesion', JSON.stringify({
+                        id: data.id,
+                        usuario: data.usuario,
+                        rol: data.rol
+                    }));
 
                     window.location.href = '/';
                 } catch (err) {
