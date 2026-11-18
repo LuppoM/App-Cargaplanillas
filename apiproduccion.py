@@ -123,7 +123,7 @@ def vista_planillas(request: Request):
 def vista_ntanque(request: Request):
     return templates.TemplateResponse(request, "nivelestanque.html", {})
 
-@app.get("/abmusuario", response_class=HTMLResponse)
+@app.get("/abmusuarios", response_class=HTMLResponse)
 def vista_ntanque(request: Request):
     return templates.TemplateResponse(request, "abmusuarios.html", {})
 
