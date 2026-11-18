@@ -122,9 +122,10 @@ def vista_planillas(request: Request):
 @app.get("/ntanque", response_class=HTMLResponse)
 def vista_ntanque(request: Request):
     return templates.TemplateResponse(request, "nivelestanque.html", {})
+
 @app.get("/abmusuario", response_class=HTMLResponse)
 def vista_ntanque(request: Request):
-    return templates.TemplateResponse(request, "nivelestanque.html", {})
+    return templates.TemplateResponse(request, "abmusuarios.html", {})
 
 # ==========================================
 # 2. MÓDULO: TEÓRICOS (ENDPOINTS DE API)
