@@ -258,7 +258,7 @@
             nPct = Math.min(100, Math.max(0, (kgMan / cfg.capacidad) * 100));
         }
 
-        const total = kgMan > 0 ? kgMan : cantidad;
+        const total = cantidad + kgMan;
 
         return {
             nCm: nCm !== null ? Math.round(nCm) : null,
