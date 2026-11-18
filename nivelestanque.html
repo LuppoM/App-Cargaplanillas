@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niveles de Tanques - Planta Chocolates</title>
+    <link rel="stylesheet" href="/static/nivelestanquevista.css?v=1.0">
+</head>
+<body>
+
+    <div class="header-container">
+        <h2>Niveles de Tanques — Planta Chocolates</h2>
+    </div>
+
+    <!-- Toolstrip Principal -->
+    <div class="toolstrip">
+        <div class="toolstrip-group">
+            <button class="btn-tool" onclick="abrirFormulario()">+ Nuevo Relevamiento</button>
+            <button class="btn-tool btn-tool-edit" onclick="modificarSeleccionado()">Modificar</button>
+            <button class="btn-tool btn-tool-delete" onclick="eliminarSeleccionado()">Eliminar</button>
+            <button class="btn-tool btn-tool-back" onclick="window.location.href='/'">Volver</button>
+        </div>
+        <div class="toolstrip-group">
+            <span class="filtros-label">Filtros:</span>
+            <input type="text" id="input-buscar" placeholder="Buscar supervisor, operario..." onkeyup="aplicarFiltros()">
+            <input type="date" id="filtro-fecha" onchange="aplicarFiltros()">
+        </div>
+    </div>
+
+    <!-- Tabla Historial de Relevamientos -->
+    <div class="tabla-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Fecha y Hora</th>
+                    <th>Supervisor</th>
+                    <th>Operario</th>
+                    <th>Tanques Medidos</th>
+                    <th>Total Stock (Kg)</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-relevamientos">
+                <!-- Carga dinámica desde /api/nivelestanque -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Visualización Gráfica: Sala de Tanques (del relevamiento seleccionado o último cargado) -->
+    <div class="sala-tanques-card">
+        <div class="sala-header">
+            <h3 id="titulo-sala-tanques">Sala de Tanques — Estado Actual</h3>
+            <span id="subtitulo-sala-tanques" class="sala-subtitulo">Seleccione un relevamiento para visualizar niveles</span>
+        </div>
+        <div id="grid-sala-tanques" class="sala-tanques-grid">
+            <!-- Barras verticales generadas por JS -->
+        </div>
+    </div>
+
+    <!-- Modal de Carga y Modificación de Relevamiento -->
+    <div id="modal-tanques" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header-bar">
+                <h3 id="modal-titulo">Nuevo Relevamiento de Tanques</h3>
+                <button type="button" class="btn-close-x" onclick="cerrarFormulario()">&times;</button>
+            </div>
+
+            <form id="form-tanques" onsubmit="guardarRelevamiento(event)">
+                <input type="hidden" id="relevamiento-id">
+
+                <div class="modal-body-scroll">
+                    <!-- 1. CABECERA DEL RELEVAMIENTO -->
+                    <div class="seccion-titulo">1. Datos del Relevamiento</div>
+                    <div class="form-grid-cabecera">
+                        <div class="form-group">
+                            <label>Fecha y Hora</label>
+                            <input type="datetime-local" id="fecha_hora" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Supervisor</label>
+                            <input type="text" id="supervisor" placeholder="Ej: Sanchez" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Operario</label>
+                            <input type="text" id="operario" placeholder="Ej: Caceres" required>
+                        </div>
+                    </div>
+
+                    <!-- 2. PLANILLA DE MEDICIÓN POR TANQUE -->
+                    <div class="seccion-titulo">2. Lectura de Niveles por Tanque</div>
+                    <div class="tabla-modal-wrapper">
+                        <table class="tabla-medicion">
+                            <thead>
+                                <tr>
+                                    <th>TK</th>
+                                    <th>Código</th>
+                                    <th>Descripción</th>
+                                    <th>Valor Medido</th>
+                                    <th>N / CM</th>
+                                    <th>N / %</th>
+                                    <th>Cantidad (Kg)</th>
+                                    <th>N° Conca</th>
+                                    <th>Kg Conca / Manual</th>
+                                    <th>TOTAL (Kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-modal-tanques">
+                                <!-- 14 filas de tanques renderizadas dinámicamente -->
+                            </tbody>
+                            <tfoot>
+                                <tr class="fila-totales-modal">
+                                    <td colspan="6" style="text-align: right;"><strong>TOTAL GENERAL EN PLANTA:</strong></td>
+                                    <td id="total-cantidad-modal">0</td>
+                                    <td></td>
+                                    <td id="total-kg-manual-modal">0</td>
+                                    <td id="total-general-modal" class="celda-total-verde">0</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="cerrarFormulario()">Cancelar</button>
+                    <button type="submit" class="btn-save">Guardar Relevamiento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Vista Rápida / Detalle -->
+    <div id="modal-detalle-tanques" class="modal" style="display: none;">
+        <div class="modal-content modal-detalle-box">
+            <div class="modal-header-bar">
+                <h3 id="titulo-detalle-tanques">Detalle de Relevamiento</h3>
+                <button type="button" class="btn-close-x" onclick="cerrarModalDetalle()">&times;</button>
+            </div>
+            <div class="modal-body-scroll">
+                <table class="tabla-medicion">
+                    <thead>
+                        <tr>
+                            <th>TK</th>
+                            <th>Código</th>
+                            <th>Descripción</th>
+                            <th>Valor Medido</th>
+                            <th>N / CM</th>
+                            <th>N / %</th>
+                            <th>Cantidad</th>
+                            <th>N° Conca</th>
+                            <th>Kg</th>
+                            <th>TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-detalle-vista"></tbody>
+                </table>
+            </div>
+            <div class="modal-buttons">
+                <strong id="resumen-detalle-total" style="margin-right: auto; color: #166534; align-self: center;"></strong>
+                <button type="button" class="btn-cancel" onclick="cerrarModalDetalle()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    /**
+     * Maestro de los 14 tanques de Planta Chocolates.
+     * - altura_total_cm: altura total del tanque desde la regla/sensor (para sacar N/CM = altura_total_cm - valor_medido).
+     * - kg_por_cm: factor de conversión de centímetros de producto a kilogramos.
+     * - modo: 'vacio' (mide espacio vacío desde arriba: N/CM = altura_total - valor_medido)
+     *         'directo' (mide altura de producto desde abajo: N/CM = valor_medido)
+     *         'manual' (no usa regla, toma cantidad/kg manual)
+     */
+    const CONFIG_TANQUES = [
+        { tanque: "STK-MOVIL",          codigo_def: "",          desc_def: "",                         altura_total_cm: 0,   kg_por_cm: 0,     modo: "manual" },
+        { tanque: "MUECAS",             codigo_def: "6020008",   desc_def: "chocolate leche",          altura_total_cm: 201, kg_por_cm: 24.89, modo: "vacio"  },
+        { tanque: "STK- 03 Chook",      codigo_def: "6020178,7", desc_def: "chook",                    altura_total_cm: 178, kg_por_cm: 0,     modo: "vacio"  },
+        { tanque: "stk-04 pelayo",      codigo_def: "6020210",   desc_def: "",                         altura_total_cm: 190, kg_por_cm: 25.00, modo: "vacio"  },
+        { tanque: "STK- 05 GBA (S/A)",  codigo_def: "6020096",   desc_def: "Chocolate Semiamargo",     altura_total_cm: 191, kg_por_cm: 8.90,  modo: "vacio"  },
+        { tanque: "STK- 06",            codigo_def: "6020096",   desc_def: "semiamargo",               altura_total_cm: 191, kg_por_cm: 26.18, modo: "vacio"  },
+        { tanque: "STK-07 PASCUA",      codigo_def: "6020010",   desc_def: "Chocolate leche bimbo",    altura_total_cm: 196, kg_por_cm: 28.06, modo: "vacio"  },
+        { tanque: "STK- 08 GBA (Leche)",codigo_def: "",          desc_def: "",                         altura_total_cm: 190, kg_por_cm: 25.00, modo: "vacio"  },
+        { tanque: "STK- 09 Sollish",    codigo_def: "",          desc_def: "",                         altura_total_cm: 190, kg_por_cm: 25.00, modo: "vacio"  },
+        { tanque: "STK- 10 Grageado",   codigo_def: "6020008",   desc_def: "Chocolate leche",          altura_total_cm: 90,  kg_por_cm: 11.11, modo: "vacio"  },
+        { tanque: "blanco",             codigo_def: "6020001",   desc_def: "Chocolate Blanco",         altura_total_cm: 0,   kg_por_cm: 0,     modo: "manual" },
+        { tanque: "Tanque de licor",    codigo_def: "",          desc_def: "",                         altura_total_cm: 0,   kg_por_cm: 0,     modo: "manual" },
+        { tanque: "Tanque de illexao",  codigo_def: "",          desc_def: "",                         altura_total_cm: 0,   kg_por_cm: 0,     modo: "manual" },
+        { tanque: "laurico",            codigo_def: "",          desc_def: "",                         altura_total_cm: 0,   kg_por_cm: 0,     modo: "manual" }
+    ];
+
+    let relevamientosGlobales = [];
+    let idSeleccionado = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarRelevamientos();
+        renderizarSalaTanques([]);
+    });
+
+    /**
+     * Calcula N/CM, N/%, Cantidad, Kg y TOTAL para una fila de tanque.
+     * Cuando me pases las constantes exactas de cada tanque del Excel, ajustamos CONFIG_TANQUES.
+     */
+    function calcularFilaTanque(cfg, valorMedido, nroConca, kgManual) {
+        const tieneValor = valorMedido !== null && valorMedido !== "" && !isNaN(parseFloat(valorMedido));
+        const val = tieneValor ? parseFloat(valorMedido) : null;
+        const kgMan = (kgManual !== null && kgManual !== "" && !isNaN(parseFloat(kgManual))) ? parseFloat(kgManual) : 0;
+
+        let nCm = null;
+        let nPct = 0;
+        let cantidad = 0;
+
+        if (cfg.modo === "vacio" && val !== null && cfg.altura_total_cm > 0) {
+            nCm = Math.max(0, cfg.altura_total_cm - val);
+            nPct = Math.min(100, Math.max(0, (nCm / cfg.altura_total_cm) * 100));
+            cantidad = nCm * cfg.kg_por_cm;
+        } else if (cfg.modo === "directo" && val !== null && cfg.altura_total_cm > 0) {
+            nCm = Math.max(0, val);
+            nPct = Math.min(100, Math.max(0, (nCm / cfg.altura_total_cm) * 100));
+            cantidad = nCm * cfg.kg_por_cm;
+        }
+
+        const total = cantidad + kgMan;
+
+        return {
+            nCm: nCm !== null ? Math.round(nCm) : null,
+            nPct: Math.round(nPct),
+            cantidad: Math.round(cantidad),
+            kgManual: Math.round(kgMan),
+            total: Math.round(total)
+        };
+    }
+
+    async function cargarRelevamientos() {
+        try {
+            const res = await fetch('/api/nivelestanque');
+            const json = await res.json();
+            relevamientosGlobales = json.datos || [];
+            renderizarTablaPrincipal();
+
+            // Si hay relevamientos, cargar el más reciente en la Sala de Tanques visual
+            if (relevamientosGlobales.length > 0) {
+                const ultimoId = idSeleccionado || relevamientosGlobales[0].id;
+                await cargarDetalleEnSala(ultimoId);
+            } else {
+                renderizarSalaTanques([]);
+            }
+        } catch (err) {
+            console.error("Error al cargar relevamientos de tanques:", err);
+        }
+    }
+
+    function formatearFechaHora(isoStr) {
+        if (!isoStr) return '-';
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return isoStr;
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+    }
+
+    function renderizarTablaPrincipal() {
+        const tbody = document.getElementById('tbody-relevamientos');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        relevamientosGlobales.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.onclick = () => seleccionarFila(tr, item.id);
+            if (idSeleccionado === item.id) tr.classList.add('fila-seleccionada');
+
+            tr.innerHTML = `
+                <td>${item.id}</td>
+                <td>${formatearFechaHora(item.fecha_hora)}</td>
+                <td><strong>${item.supervisor}</strong></td>
+                <td>${item.operario}</td>
+                <td>${item.tanques_medidos || 0} / ${CONFIG_TANQUES.length}</td>
+                <td><strong>${item.total_kg ? Number(item.total_kg).toLocaleString('es-AR') + ' kg' : '-'}</strong></td>
+                <td>
+                    <button type="button" class="btn-ver" onclick="event.stopPropagation(); verDetalleRelevamiento(${item.id})">Ver Planilla</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function seleccionarFila(trElement, id) {
+        document.querySelectorAll('#tbody-relevamientos tr').forEach(r => r.classList.remove('fila-seleccionada'));
+        idSeleccionado = id;
+        trElement.classList.add('fila-seleccionada');
+        await cargarDetalleEnSala(id);
+    }
+
+    async function cargarDetalleEnSala(id) {
+        try {
+            const res = await fetch(`/api/nivelestanque/${id}`);
+            if (!res.ok) return;
+            const json = await res.json();
+            const reg = json.datos;
+            if (!reg) return;
+
+            document.getElementById('titulo-sala-tanques').innerText = `Sala de Tanques — Relevamiento #${reg.id}`;
+            document.getElementById('subtitulo-sala-tanques').innerText =
+                `${formatearFechaHora(reg.fecha_hora)} | Supervisor: ${reg.supervisor} | Operario: ${reg.operario}`;
+
+            renderizarSalaTanques(reg.detalles || []);
+        } catch (err) {
+            console.error("Error al cargar gráfico de sala:", err);
+        }
+    }
+
+    function renderizarSalaTanques(detalles) {
+        const grid = document.getElementById('grid-sala-tanques');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        CONFIG_TANQUES.forEach(cfg => {
+            const det = detalles.find(d => d.tanque.toLowerCase().trim() === cfg.tanque.toLowerCase().trim()) || {};
+            const calc = calcularFilaTanque(cfg, det.valor_medido, det.nro_conca, det.kg_manual);
+
+            const col = document.createElement('div');
+            col.className = 'tanque-visual-item';
+            col.innerHTML = `
+                <div class="tanque-pct-label">${calc.nPct}%</div>
+                <div class="tanque-cilindro">
+                    <div class="tanque-relleno" style="height: ${calc.nPct}%;">
+                        ${calc.total > 0 ? `<span class="tanque-kg-interno">${calc.total.toLocaleString('es-AR')}</span>` : ''}
+                    </div>
+                </div>
+                <div class="tanque-nombre-label" title="${det.descripcion || cfg.desc_def}">${cfg.tanque}</div>
+            `;
+            grid.appendChild(col);
+        });
+    }
+
+    function construirFilasModal(detallesExistentes = []) {
+        const tbody = document.getElementById('tbody-modal-tanques');
+        tbody.innerHTML = '';
+
+        CONFIG_TANQUES.forEach((cfg, idx) => {
+            const det = detallesExistentes.find(d => d.tanque.toLowerCase().trim() === cfg.tanque.toLowerCase().trim()) || {};
+            const codigoVal = det.codigo !== undefined && det.codigo !== null ? det.codigo : cfg.codigo_def;
+            const descVal = det.descripcion !== undefined && det.descripcion !== null ? det.descripcion : cfg.desc_def;
+            const medidoVal = det.valor_medido !== undefined && det.valor_medido !== null ? det.valor_medido : '';
+            const concaVal = det.nro_conca !== undefined && det.nro_conca !== null ? det.nro_conca : '';
+            const kgManVal = det.kg_manual !== undefined && det.kg_manual !== null ? det.kg_manual : '';
+
+            const tr = document.createElement('tr');
+            tr.dataset.index = idx;
+            tr.innerHTML = `
+                <td class="celda-tk"><strong>${cfg.tanque}</strong></td>
+                <td><input type="text" class="inp-tabla inp-cod" value="${codigoVal}" placeholder="-"></td>
+                <td><input type="text" class="inp-tabla inp-desc" value="${descVal}" placeholder="-"></td>
+                <td><input type="number" step="0.01" class="inp-tabla inp-medido" value="${medidoVal}" placeholder="-" oninput="recalcularTablaModal()"></td>
+                <td class="celda-calc celda-ncm">-</td>
+                <td class="celda-calc celda-npct">-</td>
+                <td class="celda-calc celda-cant">-</td>
+                <td><input type="number" step="1" class="inp-tabla inp-conca" value="${concaVal}" placeholder="-" oninput="recalcularTablaModal()"></td>
+                <td><input type="number" step="0.01" class="inp-tabla inp-kg-man" value="${kgManVal}" placeholder="-" oninput="recalcularTablaModal()"></td>
+                <td class="celda-total celda-total-fila">-</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        recalcularTablaModal();
+    }
+
+    function recalcularTablaModal() {
+        const filas = document.querySelectorAll('#tbody-modal-tanques tr');
+        let sumaCantidad = 0;
+        let sumaKgManual = 0;
+        let sumaTotal = 0;
+
+        filas.forEach(tr => {
+            const idx = parseInt(tr.dataset.index, 10);
+            const cfg = CONFIG_TANQUES[idx];
+
+            const valMedido = tr.querySelector('.inp-medido').value;
+            const nroConca = tr.querySelector('.inp-conca').value;
+            const kgManual = tr.querySelector('.inp-kg-man').value;
+
+            const calc = calcularFilaTanque(cfg, valMedido, nroConca, kgManual);
+
+            tr.querySelector('.celda-ncm').innerText = calc.nCm !== null ? calc.nCm : '-';
+            tr.querySelector('.celda-npct').innerText = calc.nCm !== null ? `${calc.nPct}%` : '-';
+            tr.querySelector('.celda-cant').innerText = calc.cantidad > 0 ? calc.cantidad.toLocaleString('es-AR') : '-';
+            tr.querySelector('.celda-total-fila').innerText = calc.total > 0 ? calc.total.toLocaleString('es-AR') : '-';
+
+            sumaCantidad += calc.cantidad;
+            sumaKgManual += calc.kgManual;
+            sumaTotal += calc.total;
+        });
+
+        document.getElementById('total-cantidad-modal').innerText = sumaCantidad.toLocaleString('es-AR');
+        document.getElementById('total-kg-manual-modal').innerText = sumaKgManual.toLocaleString('es-AR');
+        document.getElementById('total-general-modal').innerText = `${sumaTotal.toLocaleString('es-AR')} kg`;
+    }
+
+    function obtenerFechaHoraActualLocal() {
+        const ahora = new Date();
+        const yyyy = ahora.getFullYear();
+        const mm = String(ahora.getMonth() + 1).padStart(2, '0');
+        const dd = String(ahora.getDate()).padStart(2, '0');
+        const hh = String(ahora.getHours()).padStart(2, '0');
+        const min = String(ahora.getMinutes()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+    }
+
+    function abrirFormulario() {
+        document.getElementById('form-tanques').reset();
+        document.getElementById('relevamiento-id').value = '';
+        document.getElementById('fecha_hora').value = obtenerFechaHoraActualLocal();
+        document.getElementById('modal-titulo').innerText = 'Nuevo Relevamiento de Tanques';
+
+        construirFilasModal([]);
+        document.getElementById('modal-tanques').style.display = 'flex';
+    }
+
+    async function modificarSeleccionado() {
+        if (!idSeleccionado) {
+            alert("Seleccione un relevamiento de la tabla para modificar.");
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/nivelestanque/${idSeleccionado}`);
+            if (!res.ok) throw new Error("No se pudo cargar el relevamiento");
+            const json = await res.json();
+            const reg = json.datos;
+
+            document.getElementById('relevamiento-id').value = reg.id;
+            if (reg.fecha_hora) {
+                const d = new Date(reg.fecha_hora);
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const hh = String(d.getHours()).padStart(2, '0');
+                const min = String(d.getMinutes()).padStart(2, '0');
+                document.getElementById('fecha_hora').value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+            }
+            document.getElementById('supervisor').value = reg.supervisor || '';
+            document.getElementById('operario').value = reg.operario || '';
+            document.getElementById('modal-titulo').innerText = `Modificar Relevamiento #${reg.id}`;
+
+            construirFilasModal(reg.detalles || []);
+            document.getElementById('modal-tanques').style.display = 'flex';
+        } catch (err) {
+            console.error("Error al abrir edición:", err);
+            alert("No se pudo cargar el relevamiento seleccionado.");
+        }
+    }
+
+    function cerrarFormulario() {
+        document.getElementById('modal-tanques').style.display = 'none';
+    }
+
+    async function guardarRelevamiento(e) {
+        e.preventDefault();
+
+        const idEdit = document.getElementById('relevamiento-id').value;
+        const filas = document.querySelectorAll('#tbody-modal-tanques tr');
+        const detalles = [];
+
+        filas.forEach(tr => {
+            const idx = parseInt(tr.dataset.index, 10);
+            const cfg = CONFIG_TANQUES[idx];
+
+            const codigo = tr.querySelector('.inp-cod').value.trim();
+            const descripcion = tr.querySelector('.inp-desc').value.trim();
+            const valMedidoRaw = tr.querySelector('.inp-medido').value;
+            const concaRaw = tr.querySelector('.inp-conca').value;
+            const kgManRaw = tr.querySelector('.inp-kg-man').value;
+
+            detalles.push({
+                tanque: cfg.tanque,
+                codigo: codigo,
+                descripcion: descripcion,
+                valor_medido: valMedidoRaw !== "" ? parseFloat(valMedidoRaw) : null,
+                nro_conca: concaRaw !== "" ? parseInt(concaRaw, 10) : null,
+                kg_manual: kgManRaw !== "" ? parseFloat(kgManRaw) : null
+            });
+        });
+
+        const payload = {
+            fecha_hora: document.getElementById('fecha_hora').value,
+            supervisor: document.getElementById('supervisor').value.trim(),
+            operario: document.getElementById('operario').value.trim(),
+            detalles: detalles
+        };
+
+        const esEdicion = Boolean(idEdit);
+        const url = esEdicion ? `/api/nivelestanque/${idEdit}` : '/api/nivelestanque';
+        const metodo = esEdicion ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, {
+                method: metodo,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                cerrarFormulario();
+                await cargarRelevamientos();
+            } else {
+                const errTxt = await res.text();
+                alert(`Error ${res.status} al guardar:\n${errTxt}`);
+            }
+        } catch (err) {
+            console.error("Error de red al guardar relevamiento:", err);
+            alert("Error de conexión al guardar.");
+        }
+    }
+
+    async function eliminarSeleccionado() {
+        if (!idSeleccionado) {
+            alert("Seleccione un relevamiento de la tabla para eliminar.");
+            return;
+        }
+        if (!confirm(`¿Seguro que desea eliminar el relevamiento #${idSeleccionado}?`)) return;
+
+        try {
+            const res = await fetch(`/api/nivelestanque/${idSeleccionado}`, { method: 'DELETE' });
+            if (res.ok) {
+                idSeleccionado = null;
+                await cargarRelevamientos();
+            } else {
+                alert("No se pudo eliminar el relevamiento.");
+            }
+        } catch (err) {
+            console.error("Error al eliminar:", err);
+        }
+    }
+
+    async function verDetalleRelevamiento(id) {
+        try {
+            const res = await fetch(`/api/nivelestanque/${id}`);
+            if (!res.ok) return;
+            const json = await res.json();
+            const reg = json.datos;
+
+            document.getElementById('titulo-detalle-tanques').innerText =
+                `Planilla Tanques #${reg.id} — ${formatearFechaHora(reg.fecha_hora)} (Sup: ${reg.supervisor} / Op: ${reg.operario})`;
+
+            const tbody = document.getElementById('tbody-detalle-vista');
+            tbody.innerHTML = '';
+            let sumaTotal = 0;
+
+            CONFIG_TANQUES.forEach(cfg => {
+                const det = (reg.detalles || []).find(d => d.tanque.toLowerCase().trim() === cfg.tanque.toLowerCase().trim()) || {};
+                const calc = calcularFilaTanque(cfg, det.valor_medido, det.nro_conca, det.kg_manual);
+                sumaTotal += calc.total;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${cfg.tanque}</strong></td>
+                    <td>${det.codigo || cfg.codigo_def || '-'}</td>
+                    <td>${det.descripcion || cfg.desc_def || '-'}</td>
+                    <td>${det.valor_medido !== null && det.valor_medido !== undefined ? det.valor_medido : '-'}</td>
+                    <td class="celda-calc">${calc.nCm !== null ? calc.nCm : '-'}</td>
+                    <td class="celda-calc">${calc.nCm !== null ? calc.nPct + '%' : '-'}</td>
+                    <td>${calc.cantidad > 0 ? calc.cantidad.toLocaleString('es-AR') : '-'}</td>
+                    <td>${det.nro_conca || '-'}</td>
+                    <td>${calc.kgManual > 0 ? calc.kgManual.toLocaleString('es-AR') : '-'}</td>
+                    <td class="celda-total">${calc.total > 0 ? calc.total.toLocaleString('es-AR') : '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('resumen-detalle-total').innerText =
+                `TOTAL STOCK CHOCOLATE: ${sumaTotal.toLocaleString('es-AR')} kg`;
+            document.getElementById('modal-detalle-tanques').style.display = 'flex';
+        } catch (err) {
+            console.error("Error al ver detalle:", err);
+        }
+    }
+
+    function cerrarModalDetalle() {
+        document.getElementById('modal-detalle-tanques').style.display = 'none';
+    }
+
+    function aplicarFiltros() {
+        const texto = document.getElementById('input-buscar').value.toLowerCase().trim();
+        const fecha = document.getElementById('filtro-fecha').value; // YYYY-MM-DD
+        let fechaFormateada = '';
+        if (fecha) {
+            const [y, m, d] = fecha.split('-');
+            fechaFormateada = `${d}/${m}/${y}`;
+        }
+
+        document.querySelectorAll('#tbody-relevamientos tr').forEach(fila => {
+            const txtFila = fila.innerText.toLowerCase();
+            const okTexto = !texto || txtFila.includes(texto);
+            const okFecha = !fechaFormateada || txtFila.includes(fechaFormateada);
+            fila.style.display = (okTexto && okFecha) ? '' : 'none';
+        });
+    }
+</script>
+</body>
+</html>

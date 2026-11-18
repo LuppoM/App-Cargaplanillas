@@ -13,7 +13,7 @@ import conexion
 from teoricosmodelo import TeoricosModelo
 from sectoresmodelo import SectoresModelo
 import planillasmodelo  # <-- AGREGAR para la capa de datos de planillas
-
+import nivelestanquemodelo
 # En apiproduccion.py
 app = FastAPI(title="API PRODUCCIÓN")
 
@@ -54,6 +54,19 @@ class PlanillaSchema(BaseModel):
     detencion_rrhh: float = 0.0
     detencion_suministro: float = 0.0
     detenciones: Optional[List[DetencionItemSchema]] = []
+class TanqueDetalleSchema(BaseModel):
+    tanque: str
+    codigo: Optional[str] = ""
+    descripcion: Optional[str] = ""
+    valor_medido: Optional[float] = None
+    nro_conca: Optional[int] = None
+    kg_manual: Optional[float] = None
+
+class RelevamientoTanqueSchema(BaseModel):
+    fecha_hora: Optional[str] = None
+    supervisor: str
+    operario: str
+    detalles: List[TanqueDetalleSchema] = []
 # ==========================================
 # 1. VISTAS HTML PRINCIPALES (RUTAS DIRECTAS)
 # ==========================================
@@ -79,6 +92,10 @@ def home(request: Request):
 def home(request: Request):
     """Carga la pantalla principal de la aplicación."""
     return templates.TemplateResponse(request, "planillas.html", {})
+@app.get("/ntanque", response_class=HTMLResponse)
+def home(request: Request):
+    """Carga la pantalla principal de la aplicación."""
+    return templates.TemplateResponse(request, "nivelestanque.html", {})
 
 
 
@@ -288,3 +305,54 @@ def borrar_planilla(planilla_id: int):
         return {"ok": True, "mensaje": "Planilla eliminada correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al borrar la planilla: {str(e)}")
+    
+   # --- ENDPOINTS NIVELES TANQUE ---
+
+@app.get("/api/ntanque")
+def listar_relevamientos_tanques():
+    try:
+        registros = nivelestanquemodelo.obtener_relevamientos()
+        return {"ok": True, "datos": registros}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al consultar relevamientos: {str(e)}")
+
+@app.get("/api/ntanque/{relevamiento_id}")
+def obtener_relevamiento_tanque(relevamiento_id: int):
+    registro = nivelestanquemodelo.obtener_relevamiento_por_id(relevamiento_id)
+    if not registro:
+        raise HTTPException(status_code=404, detail="Relevamiento de tanques no encontrado")
+    return {"ok": True, "datos": registro}
+
+@app.post("/api/ntanque")
+def crear_relevamiento_tanque(payload: RelevamientoTanqueSchema):
+    try:
+        datos_dict = payload.model_dump() if hasattr(payload, 'model_dump') else payload.dict()
+        nuevo_id = nivelestanquemodelo.insertar_relevamiento(datos_dict)
+        return {"ok": True, "id": nuevo_id, "mensaje": "Relevamiento registrado correctamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al guardar el relevamiento: {str(e)}")
+
+@app.put("/api/ntanque/{relevamiento_id}")
+def modificar_relevamiento_tanque(relevamiento_id: int, payload: RelevamientoTanqueSchema):
+    registro = nivelestanquemodelo.obtener_relevamiento_por_id(relevamiento_id)
+    if not registro:
+        raise HTTPException(status_code=404, detail="El relevamiento a actualizar no existe")
+
+    try:
+        datos_dict = payload.model_dump() if hasattr(payload, 'model_dump') else payload.dict()
+        nivelestanquemodelo.actualizar_relevamiento(relevamiento_id, datos_dict)
+        return {"ok": True, "mensaje": "Relevamiento actualizado correctamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al actualizar el relevamiento: {str(e)}")
+
+@app.delete("/api/ntanque/{relevamiento_id}")
+def borrar_relevamiento_tanque(relevamiento_id: int):
+    registro = nivelestanquemodelo.obtener_relevamiento_por_id(relevamiento_id)
+    if not registro:
+        raise HTTPException(status_code=404, detail="El relevamiento a eliminar no existe")
+
+    try:
+        nivelestanquemodelo.eliminar_relevamiento(relevamiento_id)
+        return {"ok": True, "mensaje": "Relevamiento eliminado correctamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al borrar el relevamiento: {str(e)}")
