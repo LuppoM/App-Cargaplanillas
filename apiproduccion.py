@@ -16,7 +16,6 @@ from teoricosmodelo import TeoricosModelo
 from sectoresmodelo import SectoresModelo
 import planillasmodelo  # <-- AGREGAR para la capa de datos de planillas
 import nivelestanquemodelo
-import usuariosmodelo
 from pydantic import BaseModel
 import usuariosmodelo
 import abmusuariosmodelo
@@ -123,6 +122,10 @@ def vista_planillas(request: Request):
 @app.get("/ntanque", response_class=HTMLResponse)
 def vista_ntanque(request: Request):
     return templates.TemplateResponse(request, "nivelestanque.html", {})
+@app.get("/abmusuario", response_class=HTMLResponse)
+def vista_ntanque(request: Request):
+    return templates.TemplateResponse(request, "nivelestanque.html", {})
+
 # ==========================================
 # 2. MÓDULO: TEÓRICOS (ENDPOINTS DE API)
 # ==========================================
@@ -456,7 +459,7 @@ def login(payload: LoginSchema):
 @app.get("/api/usuarios")
 def listar_usuarios():
     try:
-        datos = AbmUsuariosModelo.obtener_todos()
+        datos = abmusuariosmodelo.obtener_todos()
         return {"ok": True, "datos": datos}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar usuarios: {str(e)}")
@@ -465,7 +468,7 @@ def listar_usuarios():
 @app.get("/api/usuarios/{id_usuario}")
 def obtener_usuario(id_usuario: int):
     try:
-        user = AbmUsuariosModelo.obtener_por_id(id_usuario)
+        user = abmusuariosmodelo.obtener_por_id(id_usuario)
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         return {"ok": True, "datos": user}
@@ -479,7 +482,7 @@ def obtener_usuario(id_usuario: int):
 def crear_usuario(payload: UsuarioAbmSchema):
     try:
         datos_dict = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
-        nuevo_id = AbmUsuariosModelo.insertar(datos_dict)
+        nuevo_id = abmusuariosmodelo.insertar(datos_dict)
         return {"ok": True, "id": nuevo_id, "message": "Usuario creado correctamente."}
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
