@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingreso - Carga de Planillas</title>
+    <link rel="stylesheet" href="/static/loginvista.css?v=2.0">
+</head>
+<body>
+    <main class="login-contenedor">
+        <h1 class="login-titulo">Carga de Planillas</h1>
+        <p class="login-subtitulo">Ingresá con tu usuario</p>
+
+        <form id="form-login" class="login-form" autocomplete="on" novalidate>
+            <label for="usuario">Usuario</label>
+            <input type="text" id="usuario" name="usuario" autocomplete="username" required autofocus>
+
+            <label for="clave">Contraseña</label>
+            <input type="password" id="clave" name="clave" autocomplete="current-password" required>
+
+            <p id="mensaje-error" class="mensaje-error" role="alert" hidden></p>
+
+            <button type="submit" id="btn-ingresar" class="btn-ingresar">Ingresar</button>
+        </form>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('form-login');
+            const inpUsuario = document.getElementById('usuario');
+            const inpClave = document.getElementById('clave');
+            const msgError = document.getElementById('mensaje-error');
+            const btnIngresar = document.getElementById('btn-ingresar');
+
+            function mostrarError(texto) {
+                msgError.textContent = texto;
+                msgError.hidden = false;
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                msgError.hidden = true;
+
+                const usuario = inpUsuario.value.trim();
+                const clave = inpClave.value;
+
+                if (!usuario || !clave) {
+                    mostrarError('Completá usuario y contraseña.');
+                    return;
+                }
+
+                btnIngresar.disabled = true;
+                btnIngresar.textContent = 'Ingresando...';
+
+                try {
+                    const resp = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ usuario, clave })
+                    });
+
+                    const data = await resp.json();
+
+                    if (!resp.ok || !data.ok) {
+                        mostrarError(data.detail || 'Usuario o contraseña incorrectos.');
+                        btnIngresar.disabled = false;
+                        btnIngresar.textContent = 'Ingresar';
+                        return;
+                    }
+
+                    window.location.href = '/';
+                } catch (err) {
+                    mostrarError('Error de conexión con el servidor.');
+                    btnIngresar.disabled = false;
+                    btnIngresar.textContent = 'Ingresar';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

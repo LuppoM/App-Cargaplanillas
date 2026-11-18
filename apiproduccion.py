@@ -4,7 +4,7 @@ import os
 from typing import Optional
 
 from fastapi import Body, FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel  # <-- AGREGAR para la validación de planillas
@@ -16,11 +16,32 @@ from teoricosmodelo import TeoricosModelo
 from sectoresmodelo import SectoresModelo
 import planillasmodelo  # <-- AGREGAR para la capa de datos de planillas
 import nivelestanquemodelo
+import usuariosmodelo
+from pydantic import BaseModel
+import usuariosmodelo
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+
+
 # En apiproduccion.py
 app = FastAPI(title="API PRODUCCIÓN")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=BASE_DIR)
+SECRET_KEY = os.getenv("SECRET_KEY", "palmesano-clave-secreta-produccion-2026")
+COOKIE_NAME = "sesion_produccion"
+SESSION_MAX_AGE = 60 * 60 * 12  # 12 horas
+signer = URLSafeTimedSerializer(SECRET_KEY)
+
+
+def obtener_usuario_actual(request: Request):
+    """Lee y verifica la cookie firmada. Devuelve dict {id, usuario, rol} o None."""
+    token = request.cookies.get(COOKIE_NAME)
+    if not token:
+        return None
+    try:
+        return signer.loads(token, max_age=SESSION_MAX_AGE)
+    except (BadSignature, SignatureExpired):
+        return None
 
 from typing import Optional, List
 
@@ -69,14 +90,22 @@ class RelevamientoTanqueSchema(BaseModel):
     supervisor: str
     operario: str
     detalles: List[TanqueDetalleSchema] = []
+class LoginSchema(BaseModel):
+    usuario: str
+    clave: str
 # ==========================================
 # 1. VISTAS HTML PRINCIPALES (RUTAS DIRECTAS)
 # ==========================================
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request):
+    """Carga la pantalla principal de la aplicación."""
+    return templates.TemplateResponse(request, "login.html", {})
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     """Carga la pantalla principal de la aplicación."""
     return templates.TemplateResponse(request, "principal.html", {})
+    
 
 
 
@@ -400,3 +429,49 @@ def borrar_relevamiento_tanque(relevamiento_id: int):
         return {"ok": True, "mensaje": "Relevamiento eliminado correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al borrar el relevamiento: {str(e)}")
+    
+
+# --- ENDPOINTS USUARIOS Y SESIÓN ---
+
+@app.post("/api/login")
+def login(payload: LoginSchema):
+    try:
+        user = usuariosmodelo.validar_usuario(payload.usuario, payload.clave)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al validar el usuario: {str(e)}")
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+
+    datos_sesion = {
+        "id": user["id"],
+        "usuario": user["usuario"],
+        "rol": user["rol"],
+    }
+    token = signer.dumps(datos_sesion)
+
+    response = JSONResponse(content={"ok": True, **datos_sesion})
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        samesite="lax",
+        max_age=SESSION_MAX_AGE,
+        path="/",
+    )
+    return response
+
+
+@app.post("/api/logout")
+def logout():
+    response = JSONResponse(content={"ok": True})
+    response.delete_cookie(key=COOKIE_NAME, path="/")
+    return response
+
+
+@app.get("/api/me")
+def usuario_actual(request: Request):
+    user = obtener_usuario_actual(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Sesión no iniciada o expirada")
+    return {"ok": True, **user}
