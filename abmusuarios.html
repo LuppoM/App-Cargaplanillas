@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ABM Usuarios - Sistema de Producción</title>
+    <title>Gestión de Usuarios - Sistema de Producción</title>
 
-    <link rel="icon" type="image/x-icon" href="/static/icono.ico
+    <link rel="icon" type="image/x-icon" href="/static/icono.ico">
     <link rel="stylesheet" href="/static/abmusuariosvista.css">
 
     <script>
@@ -22,53 +22,29 @@
 </head>
 <body>
 
-    <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
-    <div class="top-bar">
-        <div class="nav-container">
-            <a href="/" class="nav-btn">INICIO</a>
-            <a href="/Teoricos" class="nav-btn">TEÓRICOS</a>
-            <a href="/ntanque" class="nav-btn">NIVELES DE TANQUE</a>
-            <button class="nav-btn" onclick="window.location.href='/planillas'">CARGA PLANILLAS</button>
-
-            <div class="dropdown">
-                <button class="nav-btn" onclick="toggleDropdown(event, 'menuParametros')">
-                    PARÁMETROS ▼
-                </button>
-                <div id="menuParametros" class="dropdown-menu">
-                    <a href="/sectores">Sectores</a>
-                    <a href="/usuarios">Usuarios</a>
-                </div>
-            </div>
-
-            <button type="button" onclick="cerrarSesion()" class="nav-btn btn-salir">SALIR</button>
-        </div>
-
-        <span id="info-usuario" class="usuario-badge"></span>
-    </div>
-
-    <!-- CONTENEDOR PRINCIPAL -->
     <main class="abm-container">
         <div class="abm-card">
             <div class="abm-header">
                 <div>
+                    <a href="/" class="btn-volver">← Volver al Menú Principal</a>
                     <h1>Gestión de Usuarios</h1>
                     <p class="abm-subtitulo">Administración de accesos, contraseñas y permisos por sector</p>
                 </div>
-                <button type="button" id="btn-nuevo-usuario" class="btn-primario">
-                    + Nuevo Usuario
-                </button>
+                <div class="header-acciones">
+                    <span id="info-usuario" class="usuario-pill"></span>
+                    <button type="button" id="btn-nuevo-usuario" class="btn-primario">
+                        + Nuevo Usuario
+                    </button>
+                </div>
             </div>
 
-            <!-- BARRA DE FILTRO -->
             <div class="abm-toolbar">
                 <input type="text" id="input-buscar" class="input-buscar" placeholder="Buscar por usuario o rol...">
                 <span id="contador-registros" class="contador-registros">0 usuarios</span>
             </div>
 
-            <!-- MENSAJES DE ESTADO -->
             <div id="alerta-global" class="alerta" hidden></div>
 
-            <!-- TABLA DE USUARIOS -->
             <div class="tabla-wrapper">
                 <table class="tabla-usuarios">
                     <thead>
@@ -159,14 +135,12 @@
 
             cargarUsuarios();
 
-            // Eventos UI
             document.getElementById('btn-nuevo-usuario').addEventListener('click', abrirModalNuevo);
             document.getElementById('btn-cerrar-modal').addEventListener('click', cerrarModal);
             document.getElementById('btn-cancelar-modal').addEventListener('click', cerrarModal);
             document.getElementById('form-usuario').addEventListener('submit', guardarUsuario);
             document.getElementById('input-buscar').addEventListener('input', filtrarTabla);
 
-            // Mostrar / ocultar contraseña en el modal
             const inpClave = document.getElementById('campo-clave');
             const btnOjo = document.getElementById('btn-toggle-clave');
             const iconoOjo = document.getElementById('icono-ojo');
@@ -180,7 +154,6 @@
                     : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
             });
 
-            // Cerrar modal al hacer clic fuera de la caja
             document.getElementById('modal-usuario').addEventListener('click', (e) => {
                 if (e.target.id === 'modal-usuario') cerrarModal();
             });
@@ -405,24 +378,6 @@
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
         }
-
-        function cerrarSesion() {
-            sessionStorage.removeItem('usuario_sesion');
-            window.location.replace('/login');
-        }
-
-        function toggleDropdown(event, menuId) {
-            event.stopPropagation();
-            document.querySelectorAll('.dropdown-menu').forEach(menu => {
-                if (menu.id !== menuId) menu.classList.remove('show');
-            });
-            const menu = document.getElementById(menuId);
-            if (menu) menu.classList.toggle('show');
-        }
-
-        window.addEventListener('click', () => {
-            document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.remove('show'));
-        });
     </script>
 </body>
 </html>
