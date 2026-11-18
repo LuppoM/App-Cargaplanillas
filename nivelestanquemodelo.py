@@ -22,13 +22,15 @@ def obtener_relevamientos():
             cur.execute(sql)
             return cur.fetchall()
 def obtener_codigos_tanques():
-    """Trae los códigos únicos y sus descripciones desde la tabla de teóricos."""
+    """Trae los códigos únicos y sus descripciones de planta de pastas desde la tabla de teóricos."""
     with obtener_conexion() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             sql = """
                 SELECT DISTINCT TRIM(codigo) AS codigo, TRIM(descripcion) AS descripcion
                 FROM teoricos
-                WHERE codigo IS NOT NULL AND TRIM(codigo) <> ''
+                WHERE codigo IS NOT NULL 
+                  AND TRIM(codigo) <> ''
+                  AND planta ILIKE '%pasta%'
                 ORDER BY codigo ASC;
             """
             cur.execute(sql)

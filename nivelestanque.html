@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Niveles de Tanques - Planta Chocolates</title>
-    <link rel="stylesheet" href="/static/nivelestanquevista.css?v=1.0">
+    <link rel="stylesheet" href="/static/nivelestanquevista.css?v=2.0">
 </head>
 <body>
 
@@ -27,8 +27,8 @@
         </div>
     </div>
 
-    <!-- Tabla Historial de Relevamientos -->
-    <div class="tabla-container">
+    <!-- Tabla Historial de Relevamientos (3 turnos del día por defecto) -->
+    <div class="tabla-container tabla-turnos-dia">
         <table>
             <thead>
                 <tr>
@@ -42,7 +42,7 @@
                 </tr>
             </thead>
             <tbody id="tbody-relevamientos">
-                <!-- Carga dinámica desde /api/nivelestanque -->
+                <!-- Carga dinámica desde /api/ntanque -->
             </tbody>
         </table>
     </div>
@@ -54,7 +54,7 @@
             <span id="subtitulo-sala-tanques" class="sala-subtitulo">Seleccione un relevamiento para visualizar niveles</span>
         </div>
         <div id="grid-sala-tanques" class="sala-tanques-grid">
-            <!-- Barras verticales generadas por JS -->
+            <!-- Cilindros verticales generados por JS -->
         </div>
     </div>
 
@@ -193,7 +193,7 @@
         try {
             let res = await fetch('/api/ntanque/codigos');
             if (!res.ok) {
-                res = await fetch('/api/teoricos');
+                res = await fetch('/api/teoricos?planta=Pastas');
             }
             if (res.ok) {
                 const json = await res.json();
@@ -274,12 +274,14 @@
             const res = await fetch('/api/ntanque');
             const json = await res.json();
             relevamientosGlobales = json.datos || [];
-            renderizarTablaPrincipal();
 
             if (relevamientosGlobales.length > 0) {
                 const ultimoId = idSeleccionado || relevamientosGlobales[0].id;
+                idSeleccionado = ultimoId;
+                renderizarTablaPrincipal();
                 await cargarDetalleEnSala(ultimoId);
             } else {
+                renderizarTablaPrincipal();
                 renderizarSalaTanques([]);
             }
         } catch (err) {
@@ -304,18 +306,47 @@
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        relevamientosGlobales.forEach(item => {
+        const texto = document.getElementById('input-buscar')?.value.toLowerCase().trim() || '';
+        const fecha = document.getElementById('filtro-fecha')?.value || '';
+        const hayFiltroActivo = Boolean(texto || fecha);
+
+        let fechaFormateada = '';
+        if (fecha) {
+            const [y, m, d] = fecha.split('-');
+            fechaFormateada = `${d}/${m}/${y}`;
+        }
+
+        let listaMostrar = relevamientosGlobales;
+        if (!hayFiltroActivo) {
+            // Muestra los 3 turnos más recientes del día
+            listaMostrar = relevamientosGlobales.slice(0, 3);
+        } else {
+            listaMostrar = relevamientosGlobales.filter(item => {
+                const fStr = formatearFechaHora(item.fecha_hora).toLowerCase();
+                const supStr = (item.supervisor || '').toLowerCase();
+                const opStr = (item.operario || '').toLowerCase();
+                const okTexto = !texto || fStr.includes(texto) || supStr.includes(texto) || opStr.includes(texto);
+                const okFecha = !fechaFormateada || fStr.includes(fechaFormateada);
+                return okTexto && okFecha;
+            });
+        }
+
+        listaMostrar.forEach(item => {
             const tr = document.createElement('tr');
             tr.onclick = () => seleccionarFila(tr, item.id);
             if (idSeleccionado === item.id) tr.classList.add('fila-seleccionada');
 
+            const totalTexto = item.total_kg
+                ? `${Number(item.total_kg).toLocaleString('es-AR')} kg`
+                : 'Ver detalle';
+
             tr.innerHTML = `
-                <td>${item.id}</td>
+                <td><strong>#${item.id}</strong></td>
                 <td>${formatearFechaHora(item.fecha_hora)}</td>
                 <td><strong>${item.supervisor}</strong></td>
                 <td>${item.operario}</td>
                 <td>${item.tanques_medidos || 0} / ${CONFIG_TANQUES.length}</td>
-                <td><strong>${item.total_kg ? Number(item.total_kg).toLocaleString('es-AR') + ' kg' : '-'}</strong></td>
+                <td><strong>${totalTexto}</strong></td>
                 <td>
                     <button type="button" class="btn-ver" onclick="event.stopPropagation(); verDetalleRelevamiento(${item.id})">Ver Planilla</button>
                 </td>
@@ -357,17 +388,20 @@
         CONFIG_TANQUES.forEach(cfg => {
             const det = detalles.find(d => d.tanque.toLowerCase().trim() === cfg.tanque.toLowerCase().trim()) || {};
             const calc = calcularFilaTanque(cfg, det.valor_medido, det.nro_conca, det.kg_manual);
+            const descCorta = det.descripcion ? det.descripcion : 'Sin producto';
 
             const col = document.createElement('div');
             col.className = 'tanque-visual-item';
             col.innerHTML = `
-                <div class="tanque-pct-label">${calc.nPct}%</div>
+                <div class="tanque-pct-badge ${calc.nPct > 0 ? 'activo' : ''}">${calc.nPct}%</div>
                 <div class="tanque-cilindro">
+                    <div class="tanque-tapa-superior"></div>
                     <div class="tanque-relleno" style="height: ${calc.nPct}%;">
-                        ${calc.total > 0 ? `<span class="tanque-kg-interno">${calc.total.toLocaleString('es-AR')}</span>` : ''}
+                        ${calc.total > 0 ? `<span class="tanque-kg-interno">${calc.total.toLocaleString('es-AR')} kg</span>` : ''}
                     </div>
                 </div>
-                <div class="tanque-nombre-label" title="${det.descripcion || ''}">${cfg.tanque}</div>
+                <div class="tanque-nombre-label">${cfg.tanque}</div>
+                <div class="tanque-desc-sublabel" title="${descCorta}">${descCorta}</div>
             `;
             grid.appendChild(col);
         });
@@ -564,6 +598,10 @@
             });
 
             if (res.ok) {
+                const respJson = await res.json();
+                if (!esEdicion && respJson.id) {
+                    idSeleccionado = respJson.id;
+                }
                 cerrarFormulario();
                 await cargarRelevamientos();
             } else {
@@ -644,20 +682,7 @@
     }
 
     function aplicarFiltros() {
-        const texto = document.getElementById('input-buscar').value.toLowerCase().trim();
-        const fecha = document.getElementById('filtro-fecha').value;
-        let fechaFormateada = '';
-        if (fecha) {
-            const [y, m, d] = fecha.split('-');
-            fechaFormateada = `${d}/${m}/${y}`;
-        }
-
-        document.querySelectorAll('#tbody-relevamientos tr').forEach(fila => {
-            const txtFila = fila.innerText.toLowerCase();
-            const okTexto = !texto || txtFila.includes(texto);
-            const okFecha = !fechaFormateada || txtFila.includes(fechaFormateada);
-            fila.style.display = (okTexto && okFecha) ? '' : 'none';
-        });
+        renderizarTablaPrincipal();
     }
 </script>
 </body>
