@@ -459,3 +459,51 @@ tbody tr.fila-seleccionada {
         grid-template-columns: 1fr;
     }
 }
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+}
+
+.modal-content {
+    background: #ffffff;
+    border-radius: 10px;
+    width: 98%;
+    max-width: 1220px;
+    height: 92vh;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 35px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+}
+
+#form-tanques {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.modal-body-scroll {
+    padding: 14px 20px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 20px;
+    background-color: #f8fafc;
+    border-top: 1px solid #cbd5e1;
+    flex-shrink: 0;
+}
