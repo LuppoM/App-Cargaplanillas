@@ -5,19 +5,16 @@ from conexion import obtener_conexion
 def validar_usuario(usuario: str, clave: str):
     """
     Devuelve {"id", "usuario", "rol"} si el usuario existe, está activo
-    y la clave coincide (soporta clave directa en texto o hash de pgcrypto).
+    y la clave coincide.
     """
     sql = """
         SELECT id, usuario, rol
         FROM usuarios
-        WHERE LOWER(usuario) = LOWER(%s)
+        WHERE LOWER(TRIM(usuario)) = LOWER(%s)
           AND activo = TRUE
-          AND (
-              password_hash = %s
-              OR (password_hash LIKE '$2%%' AND password_hash = crypt(%s, password_hash))
-          )
+          AND TRIM(password_hash) = %s
     """
     with obtener_conexion() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(sql, (usuario.strip(), clave, clave))
+            cur.execute(sql, (usuario.strip(), clave.strip()))
             return cur.fetchone()
