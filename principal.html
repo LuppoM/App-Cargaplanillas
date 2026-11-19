@@ -41,28 +41,28 @@
 <body>
 
     <div class="top-bar">
-        <div class="nav-container">
+    <div class="nav-container">
 
-            <a href="/Teoricos" class="nav-btn" data-roles="admin">TEÓRICOS</a>
-            <a href="/ntanque" class="nav-btn" data-roles="admin,chocolate">NIVELES DE TANQUE</a>
+    <a href="/Teoricos" class="nav-btn" data-modulo="teoricos">TEÓRICOS</a>
+    <a href="/ntanque" class="nav-btn" data-modulo="tanques">NIVELES DE TANQUE</a>
 
-            <button class="nav-btn" data-roles="admin,chocolate,golosinas" onclick="window.location.href='/planillas'">
-                CARGA PLANILLAS
-            </button>
+    <button class="nav-btn" data-modulo="planillas" onclick="window.location.href='/planillas'">
+        CARGA PLANILLAS
+    </button>
 
-            <div class="dropdown" data-roles="admin">
-                <button class="nav-btn" onclick="toggleDropdown(event, 'menuParametros')">
-                    PARÁMETROS ▼
-                </button>
-                <div id="menuParametros" class="dropdown-menu">
-                    <a href="/sectores">Sectores</a>
-                    <a href="/abmusuarios">Usuarios</a>
-                </div>
-            </div>
-
-            <button type="button" onclick="cerrarSesion()" class="nav-btn btn-salir">SALIR</button>
-
+    <div class="dropdown" data-modulo="parametros">
+        <button class="nav-btn" onclick="toggleDropdown(event, 'menuParametros')">
+            PARÁMETROS ▼
+        </button>
+        <div id="menuParametros" class="dropdown-menu">
+            <a href="/sectores">Sectores</a>
+            <a href="/abmusuarios">Usuarios</a>
         </div>
+    </div>
+
+    <button type="button" onclick="cerrarSesion()" class="nav-btn btn-salir">SALIR</button>
+
+</div>
 
         <span id="info-usuario" class="usuario-badge"></span>
     </div>
@@ -79,10 +79,6 @@
     document.addEventListener('DOMContentLoaded', () => {
         if (!usuarioActual) return;
 
-        const rol = (usuarioActual.rol || '').toLowerCase();
-        const esAdmin = rol === 'admin';
-        const puedeLeer = usuarioActual.puede_leer !== false;
-
         const spanUser = document.getElementById('info-usuario');
         if (spanUser) {
             spanUser.textContent = `Usuario: ${usuarioActual.usuario}`;
@@ -93,19 +89,18 @@
             bienvenida.textContent = `Bienvenido, ${usuarioActual.usuario}. Seleccione una opción del menú superior para comenzar.`;
         }
 
-        document.querySelectorAll('[data-roles]').forEach(el => {
-            const permitidos = el.dataset.roles.split(',').map(r => r.trim().toLowerCase());
-            const soloAdmin = permitidos.length === 1 && permitidos[0] === 'admin';
+        // Lee los módulos habilitados desde el login (ej: "teoricos,planillas" o "*")
+        const modsUsuario = (usuarioActual.modulos || '')
+            .split(',')
+            .map(m => m.trim().toLowerCase())
+            .filter(Boolean);
 
-            // Si el botón es exclusivo de admin (ej: Gestión de Usuarios), solo entra admin
-            if (soloAdmin) {
-                if (!esAdmin) el.style.display = 'none';
-                return;
-            }
+        const accesoTotal = modsUsuario.includes('*') || (usuarioActual.rol || '').toLowerCase() === 'admin';
 
-            // Para los módulos operativos (Planillas, Tanques, Parámetros, etc.),
-            // alcanza con que tenga permiso de lectura (GET)
-            if (!esAdmin && !puedeLeer) {
+        // Oculta cualquier botón cuyo data-modulo no esté tildado para este usuario
+        document.querySelectorAll('[data-modulo]').forEach(el => {
+            const req = (el.dataset.modulo || '').trim().toLowerCase();
+            if (!accesoTotal && !modsUsuario.includes(req)) {
                 el.style.display = 'none';
             }
         });
