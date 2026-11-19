@@ -18,7 +18,7 @@ import planillasmodelo  # <-- AGREGAR para la capa de datos de planillas
 import nivelestanquemodelo
 from pydantic import BaseModel
 import usuariosmodelo
-import abmusuariosmodelo
+from abmusuariosmodelo import abmusuariosmodelo
 import cantidadentanques
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
@@ -461,33 +461,7 @@ def pdf_cantidad_tanques(id_relevamiento: int):
 
 # --- ENDPOINTS USUARIOS ---
 
-class UsuarioAbmSchema(BaseModel):
-    usuario: str
-    clave: Optional[str] = ""
-    rol: str
-    activo: bool = True
 
-
-@app.post("/api/login")
-def login(payload: LoginSchema):
-    try:
-        user = usuariosmodelo.validar_usuario(payload.usuario, payload.clave)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al validar el usuario: {str(e)}")
-
-    if not user:
-        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
-
-    return {
-            "ok": True,
-            "id": user["id"],
-            "usuario": user["usuario"],
-            "rol": user["rol"],
-            "puede_leer": user["puede_leer"],
-            "puede_crear": user["puede_crear"],
-            "puede_editar": user["puede_editar"],
-            "puede_eliminar": user["puede_eliminar"],
-        }
 
 @app.get("/api/usuarios")
 def listar_usuarios():
@@ -498,24 +472,10 @@ def listar_usuarios():
         raise HTTPException(status_code=500, detail=f"Error al consultar usuarios: {str(e)}")
 
 
-@app.get("/api/usuarios/{id_usuario}")
-def obtener_usuario(id_usuario: int):
-    try:
-        user = abmusuariosmodelo.obtener_por_id(id_usuario)
-        if not user:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        return {"ok": True, "datos": user}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener usuario: {str(e)}")
-
-
 @app.post("/api/usuarios")
 def crear_usuario(payload: UsuarioAbmSchema):
     try:
-        datos_dict = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
-        nuevo_id = abmusuariosmodelo.insertar(datos_dict)
+        nuevo_id = abmusuariosmodelo.insertar(payload.model_dump())
         return {"ok": True, "id": nuevo_id, "message": "Usuario creado correctamente."}
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
@@ -526,9 +486,8 @@ def crear_usuario(payload: UsuarioAbmSchema):
 @app.put("/api/usuarios/{id_usuario}")
 def actualizar_usuario(id_usuario: int, payload: UsuarioAbmSchema):
     try:
-        datos_dict = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
-        exito = abmusuariosmodelo.actualizar(id_usuario, datos_dict)
-        if not exito:
+        actualizado = abmusuariosmodelo.actualizar(id_usuario, payload.model_dump())
+        if not actualizado:
             raise HTTPException(status_code=404, detail="Usuario no encontrado.")
         return {"ok": True, "message": "Usuario actualizado correctamente."}
     except ValueError as ve:
@@ -542,8 +501,8 @@ def actualizar_usuario(id_usuario: int, payload: UsuarioAbmSchema):
 @app.delete("/api/usuarios/{id_usuario}")
 def eliminar_usuario(id_usuario: int):
     try:
-        exito = abmusuariosmodelo.eliminar(id_usuario)
-        if not exito:
+        eliminado = abmusuariosmodelo.eliminar(id_usuario)
+        if not eliminado:
             raise HTTPException(status_code=404, detail="Usuario no encontrado.")
         return {"ok": True, "message": "Usuario eliminado correctamente."}
     except HTTPException:

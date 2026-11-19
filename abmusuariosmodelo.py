@@ -2,7 +2,7 @@ import psycopg2.extras
 from conexion import obtener_conexion
 
 
-class AbmUsuariosModelo:
+class abmusuariosmodelo:
 
     @staticmethod
     def obtener_todos():
@@ -81,7 +81,7 @@ class AbmUsuariosModelo:
         if not usuario or not clave or not rol:
             raise ValueError("Usuario, contraseña y rol son obligatorios.")
 
-        if AbmUsuariosModelo.existe_usuario(usuario):
+        if abmusuariosmodelo.existe_usuario(usuario):
             raise ValueError(f"El usuario '{usuario}' ya existe.")
 
         sql = """
@@ -118,7 +118,7 @@ class AbmUsuariosModelo:
         if not usuario or not rol:
             raise ValueError("Usuario y rol son obligatorios.")
 
-        if AbmUsuariosModelo.existe_usuario(usuario, excluir_id=id_usuario):
+        if abmusuariosmodelo.existe_usuario(usuario, excluir_id=id_usuario):
             raise ValueError(f"El usuario '{usuario}' ya está en uso.")
 
         with obtener_conexion() as conn:
