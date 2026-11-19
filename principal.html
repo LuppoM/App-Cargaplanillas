@@ -7,6 +7,7 @@
 
     <link rel="icon" type="image/x-icon" href="/static/icono.ico">
     <link rel="stylesheet" href="/static/principalvista.css">
+    
 
     <style>
         .top-bar {
@@ -41,28 +42,28 @@
 <body>
 
     <div class="top-bar">
-    <div class="nav-container">
+        <div class="nav-container">
 
-    <a href="/Teoricos" class="nav-btn" data-modulo="teoricos">TEÓRICOS</a>
-    <a href="/ntanque" class="nav-btn" data-modulo="tanques">NIVELES DE TANQUE</a>
+            <a href="/Teoricos" class="nav-btn" data-modulo="teoricos">TEÓRICOS</a>
+            <a href="/ntanque" class="nav-btn" data-modulo="tanques">NIVELES DE TANQUE</a>
 
-    <button class="nav-btn" data-modulo="planillas" onclick="window.location.href='/planillas'">
-        CARGA PLANILLAS
-    </button>
+            <button class="nav-btn" data-modulo="planillas" onclick="window.location.href='/planillas'">
+                CARGA PLANILLAS
+            </button>
 
-    <div class="dropdown" data-modulo="parametros">
-        <button class="nav-btn" onclick="toggleDropdown(event, 'menuParametros')">
-            PARÁMETROS ▼
-        </button>
-        <div id="menuParametros" class="dropdown-menu">
-            <a href="/sectores">Sectores</a>
-            <a href="/abmusuarios">Usuarios</a>
+            <div class="dropdown" data-modulo="parametros">
+                <button class="nav-btn" onclick="toggleDropdown(event, 'menuParametros')">
+                    PARÁMETROS ▼
+                </button>
+                <div id="menuParametros" class="dropdown-menu">
+                    <a href="/sectores">Sectores</a>
+                    <a href="/abmusuarios">Usuarios</a>
+                </div>
+            </div>
+
+            <button type="button" onclick="cerrarSesion()" class="nav-btn btn-salir">SALIR</button>
+
         </div>
-    </div>
-
-    <button type="button" onclick="cerrarSesion()" class="nav-btn btn-salir">SALIR</button>
-
-</div>
 
         <span id="info-usuario" class="usuario-badge"></span>
     </div>
@@ -76,63 +77,98 @@
     </main>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        if (!usuarioActual) return;
+        function aplicarVisibilidadMenu(datosUser) {
+            const spanUser = document.getElementById('info-usuario');
+            if (spanUser) {
+                spanUser.textContent = `Usuario: ${datosUser.usuario}`;
+            }
 
-        const spanUser = document.getElementById('info-usuario');
-        if (spanUser) {
-            spanUser.textContent = `Usuario: ${usuarioActual.usuario}`;
+            const bienvenida = document.getElementById('bienvenida-texto');
+            if (bienvenida) {
+                bienvenida.textContent = `Bienvenido, ${datosUser.usuario}. Seleccione una opción del menú superior para comenzar.`;
+            }
+
+            // Lee los módulos habilitados (ej: "teoricos,planillas" o "*")
+            const modsUsuario = (datosUser.modulos || '')
+                .split(',')
+                .map(m => m.trim().toLowerCase())
+                .filter(Boolean);
+
+            const accesoTotal = modsUsuario.includes('*') || (datosUser.rol || '').toLowerCase() === 'admin';
+
+            // Muestra u oculta cada botón según data-modulo
+            document.querySelectorAll('[data-modulo]').forEach(el => {
+                const req = (el.dataset.modulo || '').trim().toLowerCase();
+                if (!accesoTotal && !modsUsuario.includes(req)) {
+                    el.style.display = 'none';
+                } else {
+                    el.style.display = '';
+                }
+            });
         }
 
-        const bienvenida = document.getElementById('bienvenida-texto');
-        if (bienvenida) {
-            bienvenida.textContent = `Bienvenido, ${usuarioActual.usuario}. Seleccione una opción del menú superior para comenzar.`;
-        }
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!usuarioActual) return;
 
-        // Lee los módulos habilitados desde el login (ej: "teoricos,planillas" o "*")
-        const modsUsuario = (usuarioActual.modulos || '')
-            .split(',')
-            .map(m => m.trim().toLowerCase())
-            .filter(Boolean);
+            // 1. Aplica inmediatamente lo que ya tiene en sesión
+            aplicarVisibilidadMenu(usuarioActual);
 
-        const accesoTotal = modsUsuario.includes('*') || (usuarioActual.rol || '').toLowerCase() === 'admin';
-
-        // Oculta cualquier botón cuyo data-modulo no esté tildado para este usuario
-        document.querySelectorAll('[data-modulo]').forEach(el => {
-            const req = (el.dataset.modulo || '').trim().toLowerCase();
-            if (!accesoTotal && !modsUsuario.includes(req)) {
-                el.style.display = 'none';
+            // 2. Sincroniza con la BD para que los cambios del ABM apliquen al instante al recargar
+            try {
+                const resp = await fetch('/api/usuarios', {
+                    headers: { 'X-Usuario': usuarioActual.usuario }
+                });
+                if (resp.ok) {
+                    const lista = await resp.json();
+                    const actualizado = lista.find(
+                        u => u.id === usuarioActual.id || u.usuario.toLowerCase() === usuarioActual.usuario.toLowerCase()
+                    );
+                    if (actualizado) {
+                        const nuevaSesion = {
+                            ...usuarioActual,
+                            rol: actualizado.rol,
+                            puede_leer: actualizado.puede_leer,
+                            puede_crear: actualizado.puede_crear,
+                            puede_editar: actualizado.puede_editar,
+                            puede_eliminar: actualizado.puede_eliminar,
+                            modulos: actualizado.modulos || ''
+                        };
+                        sessionStorage.setItem('usuario_sesion', JSON.stringify(nuevaSesion));
+                        aplicarVisibilidadMenu(nuevaSesion);
+                    }
+                }
+            } catch (e) {
+                console.warn('No se pudo refrescar sesión desde API:', e);
             }
         });
-    });
 
-    function cerrarSesion() {
-        sessionStorage.removeItem('usuario_sesion');
-        window.location.replace('/login');
-    }
+        function cerrarSesion() {
+            sessionStorage.removeItem('usuario_sesion');
+            window.location.replace('/login');
+        }
 
-    // Función para abrir / cerrar desplegables
-    function toggleDropdown(event, menuId) {
-        event.stopPropagation();
-        
-        document.querySelectorAll('.dropdown-menu').forEach(menu => {
-            if (menu.id !== menuId) {
+        // Función para abrir / cerrar desplegables
+        function toggleDropdown(event, menuId) {
+            event.stopPropagation();
+            
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                if (menu.id !== menuId) {
+                    menu.classList.remove('show');
+                }
+            });
+
+            const menu = document.getElementById(menuId);
+            if (menu) {
+                menu.classList.toggle('show');
+            }
+        }
+
+        // Cerrar menú al hacer click afuera
+        window.addEventListener('click', function() {
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
                 menu.classList.remove('show');
-            }
+            });
         });
-
-        const menu = document.getElementById(menuId);
-        if (menu) {
-            menu.classList.toggle('show');
-        }
-    }
-
-    // Cerrar menú al hacer click afuera
-    window.addEventListener('click', function() {
-        document.querySelectorAll('.dropdown-menu').forEach(menu => {
-            menu.classList.remove('show');
-        });
-    });
-</script>
+    </script>
 </body>
 </html>

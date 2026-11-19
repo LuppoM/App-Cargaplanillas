@@ -45,6 +45,49 @@ def obtener_usuario_actual(request: Request):
         return None
 
 from typing import Optional, List
+@app.middleware("http")
+async def guardian_permisos(request: Request, call_next):
+    ruta = request.url.path
+    metodo = request.method.upper()
+
+    # Dejar pasar vistas HTML, archivos estáticos y el endpoint de login
+    if not ruta.startswith("/api/") or ruta == "/api/login":
+        return await call_next(request)
+
+    # 1. Identificar usuario por header X-Usuario (seguridad.js) o por cookie firmada
+    nombre_usuario = request.headers.get("X-Usuario", "").strip()
+    if not nombre_usuario:
+        sesion_cookie = obtener_usuario_actual(request)
+        if sesion_cookie:
+            nombre_usuario = (sesion_cookie.get("usuario") or "").strip()
+
+    if not nombre_usuario:
+        return JSONResponse(status_code=401, content={"detail": "Sesión no identificada."})
+
+    # 2. Consultar permisos reales en la base de datos
+    user = abmusuariosmodelo.obtener_por_nombre(nombre_usuario)
+    if not user or not user.get("activo"):
+        return JSONResponse(status_code=403, content={"detail": "Usuario inactivo o inexistente."})
+
+    # Admin tiene paso libre a todo
+    if (user.get("rol") or "").lower() == "admin":
+        return await call_next(request)
+
+    # 3. Validar permisos CRUD según método HTTP
+    reglas = {
+        "GET": ("puede_leer", "No tenés permiso de consulta (GET)."),
+        "POST": ("puede_crear", "No tenés permiso para crear registros (POST)."),
+        "PUT": ("puede_editar", "No tenés permiso para modificar registros (PUT)."),
+        "PATCH": ("puede_editar", "No tenés permiso para modificar registros (PATCH)."),
+        "DELETE": ("puede_eliminar", "No tenés permiso para eliminar registros (DELETE)."),
+    }
+
+    if metodo in reglas:
+        campo, msg = reglas[metodo]
+        if not user.get(campo):
+            return JSONResponse(status_code=403, content={"detail": msg})
+
+    return await call_next(request)
 
 class DetencionItemSchema(BaseModel):
     taller: str
