@@ -527,6 +527,7 @@ def login(payload: LoginSchema):
             "puede_crear": user["puede_crear"],
             "puede_editar": user["puede_editar"],
             "puede_eliminar": user["puede_eliminar"],
+            "modulos": user.get("modulos", ""),
         }
     except HTTPException:
         raise
