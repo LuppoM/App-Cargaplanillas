@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Sectores</title>
     <link rel="stylesheet" href="/static/sectoresvista.css">
+    <script src="/static/seguridad.js"></script>
 </head>
 <body>
 
@@ -116,7 +117,7 @@
             try {
                 const res = await fetch('/api/sectores');
                 const resJson = await res.json();
-                datosGlobales = resJson.datos || [];
+                datosGlobales = Array.isArray(resJson) ? resJson : (resJson.datos || []);
                 datosFiltrados = [...datosGlobales];
                 paginaActual = 1;
                 renderizarTabla();
