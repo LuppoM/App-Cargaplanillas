@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Niveles de Tanques - Planta Chocolates</title>
     <link rel="stylesheet" href="/static/nivelestanquevista.css?v=2.0">
+    <script src="/static/seguridad.js"></script>
 </head>
 <body>
 
@@ -281,8 +282,12 @@
     async function cargarRelevamientos() {
         try {
             const res = await fetch('/api/ntanque');
+            if (!res.ok) {
+                console.error("Error HTTP en /api/ntanque:", res.status, await res.text());
+                return;
+            }
             const json = await res.json();
-            relevamientosGlobales = json.datos || [];
+            relevamientosGlobales = Array.isArray(json) ? json : (json.datos || []);
 
             if (relevamientosGlobales.length > 0) {
                 const ultimoId = idSeleccionado || relevamientosGlobales[0].id;
