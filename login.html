@@ -118,10 +118,15 @@
                         return;
                     }
 
-                    sessionStorage.setItem('usuario_sesion', JSON.stringify({
+                   sessionStorage.setItem('usuario_sesion', JSON.stringify({
                         id: data.id,
                         usuario: data.usuario,
-                        rol: data.rol
+                        rol: data.rol,
+                        puede_leer: data.puede_leer,
+                        puede_crear: data.puede_crear,
+                        puede_editar: data.puede_editar,
+                        puede_eliminar: data.puede_eliminar,
+                        modulos: data.modulos || ''
                     }));
 
                     window.location.href = '/';
