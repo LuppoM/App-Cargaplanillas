@@ -20,6 +20,7 @@ from pydantic import BaseModel
 import usuariosmodelo
 from abmusuariosmodelo import abmusuariosmodelo
 import cantidadentanques
+
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 
@@ -487,7 +488,7 @@ def pdf_cantidad_tanques(id_relevamiento: int):
         if not relevamiento:
             raise HTTPException(status_code=404, detail="Relevamiento no encontrado")
 
-        pdf_bytes = cantidadentanques.generar_pdf_cantidad(relevamiento)
+        pdf_bytes =cantidadentanques.g(relevamiento)
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
