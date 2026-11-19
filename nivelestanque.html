@@ -709,9 +709,27 @@ window.addEventListener('click', function() {
     if (menu) menu.style.display = 'none';
 });
 
+async function abrirPdf(url) {
+    const ventana = window.open('', '_blank');
+    try {
+        const resp = await fetch(url); // el interceptor de seguridad.js agrega X-Usuario
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            if (ventana) ventana.close();
+            alert(err.detail || 'No se pudo generar el PDF.');
+            return;
+        }
+        const blobUrl = URL.createObjectURL(await resp.blob());
+        if (ventana) ventana.location = blobUrl; else window.location = blobUrl;
+    } catch (e) {
+        if (ventana) ventana.close();
+        alert('Error: ' + e.message);
+    }
+}
+
 function imprimirPlanillaBlanco() {
     document.getElementById('menu-imprimir').style.display = 'none';
-    window.open('/api/ntanque/pdf/blanco', '_blank');
+    abrirPdf('/api/ntanque/pdf/blanco');
 }
 
 function imprimirCantidadTanques() {
@@ -720,7 +738,7 @@ function imprimirCantidadTanques() {
         alert("Seleccione un relevamiento de la tabla para imprimir la cantidad en tanques.");
         return;
     }
-    window.open(`/api/ntanque/pdf/cantidad/${idSeleccionado}`, '_blank');
+    abrirPdf(`/api/ntanque/pdf/cantidad/${idSeleccionado}`);
 }
 </script>
 </body>
