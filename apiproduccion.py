@@ -457,7 +457,7 @@ def pdf_cantidad_tanques(id_relevamiento: int):
         raise HTTPException(status_code=500, detail=f"Error al generar PDF: {str(e)}")
     
 
-# --- ENDPOINTS USUARIOS Y SESIÓN ---
+
 
 # --- ENDPOINTS USUARIOS ---
 
@@ -509,3 +509,27 @@ def eliminar_usuario(id_usuario: int):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al eliminar usuario: {str(e)}")
+    
+    # --- ENDPOINTS LOGIN ---
+@app.post("/api/login")
+def login(payload: LoginSchema):
+    try:
+        user = usuariosmodelo.validar_usuario(payload.usuario, payload.clave)
+        if not user:
+            raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos.")
+
+        return {
+            "ok": True,
+            "id": user["id"],
+            "usuario": user["usuario"],
+            "rol": user["rol"],
+            "puede_leer": user["puede_leer"],
+            "puede_crear": user["puede_crear"],
+            "puede_editar": user["puede_editar"],
+            "puede_eliminar": user["puede_eliminar"],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en login: {str(e)}")
+    
