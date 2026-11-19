@@ -4,7 +4,7 @@ import os
 from typing import Optional
 
 from fastapi import Body, FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel  # <-- AGREGAR para la validación de planillas
@@ -19,7 +19,7 @@ import nivelestanquemodelo
 from pydantic import BaseModel
 import usuariosmodelo
 import abmusuariosmodelo
-
+import cantidadentanques
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 
@@ -426,6 +426,26 @@ def borrar_relevamiento_tanque(relevamiento_id: int):
         return {"ok": True, "mensaje": "Relevamiento eliminado correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al borrar el relevamiento: {str(e)}")
+    
+@app.get("/api/ntanque/pdf/cantidad/{id_relevamiento}")
+def pdf_cantidad_tanques(id_relevamiento: int):
+    try:
+        relevamiento = nivelestanquemodelo.obtener_por_id(id_relevamiento)
+        if not relevamiento:
+            raise HTTPException(status_code=404, detail="Relevamiento no encontrado")
+
+        pdf_bytes = cantidadentanques.generar_pdf_cantidad(relevamiento)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"inline; filename=cantidad_tanques_{id_relevamiento}.pdf"
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al generar PDF: {str(e)}")
     
 
 # --- ENDPOINTS USUARIOS Y SESIÓN ---

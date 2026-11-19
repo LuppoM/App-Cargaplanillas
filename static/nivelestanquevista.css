@@ -587,3 +587,44 @@ tbody tr.fila-seleccionada {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+.dropdown-imprimir {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-imprimir-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 195px;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);
+    z-index: 999;
+    overflow: hidden;
+}
+
+.dropdown-imprimir-menu button {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    text-align: left;
+    background: none;
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.dropdown-imprimir-menu button:last-child {
+    border-bottom: none;
+}
+
+.dropdown-imprimir-menu button:hover {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+}

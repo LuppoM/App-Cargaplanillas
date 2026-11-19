@@ -18,7 +18,15 @@
             <button class="btn-tool" onclick="abrirFormulario()">+ Nuevo Relevamiento</button>
             <button class="btn-tool btn-tool-edit" onclick="modificarSeleccionado()">Modificar</button>
             <button class="btn-tool btn-tool-delete" onclick="eliminarSeleccionado()">Eliminar</button>
-            <button class="btn-tool btn-tool-print" onclick="imprimirSeleccionado()">Imprimir</button>
+            <div class="dropdown-imprimir">
+            <button type="button" class="btn-tool btn-tool-print" onclick="toggleMenuImprimir(event)">
+                Imprimir ▼
+            </button>
+    <div id="menu-imprimir" class="dropdown-imprimir-menu" style="display: none;">
+        <button type="button" onclick="imprimirPlanillaBlanco()">Planilla en Blanco</button>
+        <button type="button" onclick="imprimirCantidadTanques()">Cantidad en Tanques</button>
+    </div>
+</div>
             <button class="btn-tool btn-tool-back" onclick="window.location.href='/'">Volver</button>
         </div>
         <div class="toolstrip-group">
@@ -685,12 +693,30 @@
     function aplicarFiltros() {
         renderizarTablaPrincipal();
     }
-        function imprimirSeleccionado() {
-            if (!idSeleccionado) {
-                alert("Seleccione un relevamiento de la tabla para imprimir.");
-                return;
-            }
-            window.open('/api/ntanque/pdf/blanco', '_blank');        }
+        function toggleMenuImprimir(event) {
+    event.stopPropagation();
+    const menu = document.getElementById('menu-imprimir');
+    menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+}
+
+window.addEventListener('click', function() {
+    const menu = document.getElementById('menu-imprimir');
+    if (menu) menu.style.display = 'none';
+});
+
+function imprimirPlanillaBlanco() {
+    document.getElementById('menu-imprimir').style.display = 'none';
+    window.open('/api/ntanque/pdf/blanco', '_blank');
+}
+
+function imprimirCantidadTanques() {
+    document.getElementById('menu-imprimir').style.display = 'none';
+    if (!idSeleccionado) {
+        alert("Seleccione un relevamiento de la tabla para imprimir la cantidad en tanques.");
+        return;
+    }
+    window.open(`/api/ntanque/pdf/cantidad/${idSeleccionado}`, '_blank');
+}
 </script>
 </body>
 </html>
