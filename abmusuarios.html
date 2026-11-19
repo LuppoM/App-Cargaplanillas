@@ -28,7 +28,7 @@
                 <div>
                     <a href="/" class="btn-volver">← Volver al Menú Principal</a>
                     <h1>Gestión de Usuarios</h1>
-                    <p class="abm-subtitulo">Administración de accesos, contraseñas y permisos HTTP por usuario</p>
+                    <p class="abm-subtitulo">Administración de accesos, contraseñas, permisos HTTP y módulos visibles</p>
                 </div>
                 <div class="header-acciones">
                     <span id="info-usuario" class="usuario-pill"></span>
@@ -54,13 +54,14 @@
                             <th>Contraseña</th>
                             <th>Rol</th>
                             <th>Permisos API</th>
+                            <th>Módulos Visibles</th>
                             <th>Estado</th>
                             <th class="col-acciones">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-usuarios">
                         <tr>
-                            <td colspan="7" class="texto-centro">Cargando usuarios...</td>
+                            <td colspan="8" class="texto-centro">Cargando usuarios...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -133,6 +134,29 @@
                     </div>
                 </div>
 
+                <!-- BLOQUE DE MÓDULOS VISIBLES EN EL MENÚ -->
+                <div class="campo-grupo">
+                    <label>Botones Visibles en el Menú</label>
+                    <div class="permisos-grid">
+                        <label class="permiso-item">
+                            <input type="checkbox" class="chk-modulo" value="teoricos" checked>
+                            <span>Teóricos</span>
+                        </label>
+                        <label class="permiso-item">
+                            <input type="checkbox" class="chk-modulo" value="tanques" checked>
+                            <span>Niveles de Tanque</span>
+                        </label>
+                        <label class="permiso-item">
+                            <input type="checkbox" class="chk-modulo" value="planillas" checked>
+                            <span>Carga Planillas</span>
+                        </label>
+                        <label class="permiso-item">
+                            <input type="checkbox" class="chk-modulo" value="parametros">
+                            <span>Parámetros (Admin)</span>
+                        </label>
+                    </div>
+                </div>
+
                 <div class="campo-grupo campo-checkbox">
                     <label class="switch-label">
                         <input type="checkbox" id="campo-activo" checked>
@@ -174,19 +198,6 @@
             document.getElementById('form-usuario').addEventListener('submit', guardarUsuario);
             document.getElementById('input-buscar').addEventListener('input', filtrarTabla);
 
-            // Sugerencia automática de permisos al elegir rol en usuario nuevo
-            document.getElementById('campo-rol').addEventListener('change', (e) => {
-                if (document.getElementById('usuario-id').value) return; // En edición respeta lo cargado
-                const rol = e.target.value;
-                if (rol === 'admin') {
-                    setearCheckboxesPermisos(true, true, true, true);
-                } else if (rol === 'chocolate' || rol === 'golosinas') {
-                    setearCheckboxesPermisos(true, true, true, false);
-                } else if (rol === 'programacion') {
-                    setearCheckboxesPermisos(true, false, false, false);
-                }
-            });
-
             const inpClave = document.getElementById('campo-clave');
             const btnOjo = document.getElementById('btn-toggle-clave');
             const iconoOjo = document.getElementById('icono-ojo');
@@ -212,6 +223,14 @@
             document.getElementById('perm-eliminar').checked = Boolean(eliminar);
         }
 
+        function setearCheckboxesModulos(modulosStr) {
+            const lista = (modulosStr || '').split(',').map(m => m.trim().toLowerCase());
+            const esTotal = lista.includes('*');
+            document.querySelectorAll('.chk-modulo').forEach(chk => {
+                chk.checked = esTotal || lista.includes(chk.value);
+            });
+        }
+
         async function cargarUsuarios() {
             const tbody = document.getElementById('tbody-usuarios');
             try {
@@ -225,7 +244,7 @@
                 listaUsuarios = data.datos || [];
                 renderizarTabla(listaUsuarios);
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="7" class="texto-centro texto-error">${err.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="texto-centro texto-error">${err.message}</td></tr>`;
             }
         }
 
@@ -241,13 +260,30 @@
             ).join(' ');
         }
 
+        function renderizarBadgesModulos(u) {
+            const mods = (u.modulos || '').split(',').map(m => m.trim().toLowerCase());
+            if (mods.includes('*')) {
+                return `<span class="perm-tag perm-on">TODOS</span>`;
+            }
+            const catalogo = [
+                { key: 'teoricos', label: 'Teóricos' },
+                { key: 'tanques', label: 'Tanques' },
+                { key: 'planillas', label: 'Planillas' },
+                { key: 'parametros', label: 'Parámetros' }
+            ];
+            return catalogo
+                .filter(c => mods.includes(c.key))
+                .map(c => `<span class="perm-tag perm-on">${c.label}</span>`)
+                .join(' ') || `<span class="perm-tag perm-off">Ninguno</span>`;
+        }
+
         function renderizarTabla(datos) {
             const tbody = document.getElementById('tbody-usuarios');
             const contador = document.getElementById('contador-registros');
             contador.textContent = `${datos.length} usuario${datos.length === 1 ? '' : 's'}`;
 
             if (!datos.length) {
-                tbody.innerHTML = `<tr><td colspan="7" class="texto-centro">No se encontraron usuarios.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="texto-centro">No se encontraron usuarios.</td></tr>`;
                 return;
             }
 
@@ -268,6 +304,7 @@
                         </td>
                         <td>${badgeRol}</td>
                         <td class="celda-permisos">${renderizarBadgesPermisos(u)}</td>
+                        <td class="celda-permisos">${renderizarBadgesModulos(u)}</td>
                         <td>${badgeEstado}</td>
                         <td class="col-acciones">
                             <button type="button" class="btn-accion btn-editar" onclick="abrirModalEditar(${u.id})">Editar</button>
@@ -315,6 +352,7 @@
             document.getElementById('campo-rol').value = '';
             document.getElementById('campo-activo').checked = true;
             setearCheckboxesPermisos(true, false, false, false);
+            setearCheckboxesModulos('teoricos,tanques,planillas');
             ocultarErrorModal();
 
             document.getElementById('modal-usuario').hidden = false;
@@ -333,25 +371,16 @@
             document.getElementById('campo-clave').required = false;
             document.getElementById('label-clave').textContent = 'Nueva Contraseña (opcional)';
             document.getElementById('ayuda-clave').hidden = false;
-
-            const selectRol = document.getElementById('campo-rol');
-            const rolVal = (user.rol || '').toLowerCase();
-            // Si el usuario tiene un rol personalizado que no está en el select, lo agrega temporalmente
-            if (rolVal && !Array.from(selectRol.options).some(opt => opt.value === rolVal)) {
-                const opt = document.createElement('option');
-                opt.value = rolVal;
-                opt.textContent = rolVal;
-                selectRol.appendChild(opt);
-            }
-            selectRol.value = rolVal;
-
+            document.getElementById('campo-rol').value = user.rol || '';
             document.getElementById('campo-activo').checked = user.activo !== false;
+
             setearCheckboxesPermisos(
                 user.puede_leer !== false,
                 user.puede_crear,
                 user.puede_editar,
                 user.puede_eliminar
             );
+            setearCheckboxesModulos(user.modulos || 'teoricos,tanques,planillas');
             ocultarErrorModal();
 
             document.getElementById('modal-usuario').hidden = false;
@@ -369,13 +398,17 @@
             const id = document.getElementById('usuario-id').value;
             const usuario = document.getElementById('campo-usuario').value.trim();
             const clave = document.getElementById('campo-clave').value.trim();
-            const rol = document.getElementById('campo-rol').value;
+            const rol = document.getElementById('campo-rol').value.trim();
             const activo = document.getElementById('campo-activo').checked;
 
             const puede_leer = document.getElementById('perm-leer').checked;
             const puede_crear = document.getElementById('perm-crear').checked;
             const puede_editar = document.getElementById('perm-editar').checked;
             const puede_eliminar = document.getElementById('perm-eliminar').checked;
+
+            const chksModulos = document.querySelectorAll('.chk-modulo');
+            const seleccionados = Array.from(chksModulos).filter(c => c.checked).map(c => c.value);
+            const modulos = seleccionados.length === chksModulos.length ? '*' : seleccionados.join(',');
 
             if (!usuario || !rol) {
                 mostrarErrorModal('Completá el usuario y el rol.');
@@ -405,7 +438,8 @@
                         puede_leer,
                         puede_crear,
                         puede_editar,
-                        puede_eliminar
+                        puede_eliminar,
+                        modulos
                     })
                 });
 

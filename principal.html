@@ -76,58 +76,68 @@
     </main>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (!usuarioActual) return;
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!usuarioActual) return;
 
-            const rol = (usuarioActual.rol || '').toLowerCase();
+        const rol = (usuarioActual.rol || '').toLowerCase();
+        const esAdmin = rol === 'admin';
+        const puedeLeer = usuarioActual.puede_leer !== false;
 
-            // Muestra usuario como etiqueta arriba a la derecha (sin rol entre los botones)
-            const spanUser = document.getElementById('info-usuario');
-            if (spanUser) {
-                spanUser.textContent = `Usuario: ${usuarioActual.usuario}`;
+        const spanUser = document.getElementById('info-usuario');
+        if (spanUser) {
+            spanUser.textContent = `Usuario: ${usuarioActual.usuario}`;
+        }
+
+        const bienvenida = document.getElementById('bienvenida-texto');
+        if (bienvenida) {
+            bienvenida.textContent = `Bienvenido, ${usuarioActual.usuario}. Seleccione una opción del menú superior para comenzar.`;
+        }
+
+        document.querySelectorAll('[data-roles]').forEach(el => {
+            const permitidos = el.dataset.roles.split(',').map(r => r.trim().toLowerCase());
+            const soloAdmin = permitidos.length === 1 && permitidos[0] === 'admin';
+
+            // Si el botón es exclusivo de admin (ej: Gestión de Usuarios), solo entra admin
+            if (soloAdmin) {
+                if (!esAdmin) el.style.display = 'none';
+                return;
             }
 
-            const bienvenida = document.getElementById('bienvenida-texto');
-            if (bienvenida) {
-                bienvenida.textContent = `Bienvenido, ${usuarioActual.usuario}. Seleccione una opción del menú superior para comenzar.`;
+            // Para los módulos operativos (Planillas, Tanques, Parámetros, etc.),
+            // alcanza con que tenga permiso de lectura (GET)
+            if (!esAdmin && !puedeLeer) {
+                el.style.display = 'none';
             }
-
-            // Oculta botones según el rol del usuario
-            document.querySelectorAll('[data-roles]').forEach(el => {
-                const permitidos = el.dataset.roles.split(',').map(r => r.trim().toLowerCase());
-                if (!permitidos.includes(rol)) {
-                    el.style.display = 'none';
-                }
-            });
         });
+    });
 
-        function cerrarSesion() {
-            sessionStorage.removeItem('usuario_sesion');
-            window.location.replace('/login');
-        }
+    function cerrarSesion() {
+        sessionStorage.removeItem('usuario_sesion');
+        window.location.replace('/login');
+    }
 
-        // Función para abrir / cerrar desplegables
-        function toggleDropdown(event, menuId) {
-            event.stopPropagation();
-            
-            document.querySelectorAll('.dropdown-menu').forEach(menu => {
-                if (menu.id !== menuId) {
-                    menu.classList.remove('show');
-                }
-            });
-
-            const menu = document.getElementById(menuId);
-            if (menu) {
-                menu.classList.toggle('show');
-            }
-        }
-
-        // Cerrar menú al hacer click afuera
-        window.addEventListener('click', function() {
-            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+    // Función para abrir / cerrar desplegables
+    function toggleDropdown(event, menuId) {
+        event.stopPropagation();
+        
+        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+            if (menu.id !== menuId) {
                 menu.classList.remove('show');
-            });
+            }
         });
-    </script>
+
+        const menu = document.getElementById(menuId);
+        if (menu) {
+            menu.classList.toggle('show');
+        }
+    }
+
+    // Cerrar menú al hacer click afuera
+    window.addEventListener('click', function() {
+        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    });
+</script>
 </body>
 </html>
