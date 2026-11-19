@@ -5,17 +5,18 @@
         return;
     }
 
-    // 1. Interceptor global de fetch: inyecta X-Usuario en cada llamada a /api/...
+    // 1. Interceptor global de fetch: inyecta X-Usuario en cada llamada a la API
     const _fetchOriginal = window.fetch;
-    window.fetch = async function (url, options = {}) {
-        if (typeof url === 'string' && url.startsWith('/api/')) {
-            options.headers = {
-                ...(options.headers || {}),
-                'X-Usuario': sesion.usuario
-            };
+    window.fetch = async function (input, options = {}) {
+        const url = typeof input === 'string' ? input : (input && input.url) || '';
+
+        if (url.includes('/api/') || url.startsWith('api/')) {
+            const headers = new Headers(options.headers || (input instanceof Request ? input.headers : undefined));
+            headers.set('X-Usuario', sesion.usuario);
+            options = { ...options, headers };
         }
 
-        const response = await _fetchOriginal(url, options);
+        const response = await _fetchOriginal(input, options);
 
         // Si el servidor bloquea la acción (403 Forbidden), muestra alerta clara
         if (response.status === 403) {
