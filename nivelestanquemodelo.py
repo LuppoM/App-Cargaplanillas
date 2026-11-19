@@ -21,6 +21,8 @@ def obtener_relevamientos():
             """
             cur.execute(sql)
             return cur.fetchall()
+
+
 def obtener_codigos_tanques():
     """Trae los códigos únicos y sus descripciones de planta de pastas desde la tabla de teóricos."""
     with obtener_conexion() as conn:
@@ -35,6 +37,7 @@ def obtener_codigos_tanques():
             """
             cur.execute(sql)
             return cur.fetchall()
+
 
 def obtener_relevamiento_por_id(relevamiento_id: int):
     """Devuelve la cabecera del relevamiento junto con el detalle de cada tanque."""
@@ -91,7 +94,7 @@ def _preparar_filas_detalle(relevamiento_id: int, detalles: list):
 
 
 def insertar_relevamiento(datos: dict):
-    """Crea un relevamiento de tanques y guarda el detalle de todos los tanques."""
+    """Crea un relevamiento de tanques, guarda su detalle y purga si llega a 100 registros."""
     detalles = datos.pop("detalles", []) or []
 
     with obtener_conexion() as conn:
@@ -115,6 +118,28 @@ def insertar_relevamiento(datos: dict):
                         ) VALUES (%s, %s, %s, %s, %s, %s, %s);
                     """
                     cur.executemany(sql_detalle, filas)
+
+                # Autonomía hasta 100 registros: al llegar a 100, borra 97 y deja los últimos 3
+                cur.execute("SELECT COUNT(*) AS total FROM relevamientos_tanques;")
+                total = cur.fetchone()["total"]
+
+                if total >= 100:
+                    cur.execute("""
+                        SELECT id FROM relevamientos_tanques
+                        ORDER BY fecha_hora DESC, id DESC
+                        LIMIT 3;
+                    """)
+                    ultimos_3_ids = [fila["id"] for fila in cur.fetchall()]
+
+                    if ultimos_3_ids:
+                        cur.execute(
+                            "DELETE FROM relevamientos_tanques_detalle WHERE relevamiento_id NOT IN %s;",
+                            (tuple(ultimos_3_ids),)
+                        )
+                        cur.execute(
+                            "DELETE FROM relevamientos_tanques WHERE id NOT IN %s;",
+                            (tuple(ultimos_3_ids),)
+                        )
 
                 conn.commit()
                 return nuevo_id
