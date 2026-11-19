@@ -28,7 +28,7 @@
                 <div>
                     <a href="/" class="btn-volver">← Volver al Menú Principal</a>
                     <h1>Gestión de Usuarios</h1>
-                    <p class="abm-subtitulo">Administración de accesos, contraseñas y permisos por sector</p>
+                    <p class="abm-subtitulo">Administración de accesos, contraseñas y permisos HTTP por usuario</p>
                 </div>
                 <div class="header-acciones">
                     <span id="info-usuario" class="usuario-pill"></span>
@@ -53,13 +53,14 @@
                             <th>Usuario</th>
                             <th>Contraseña</th>
                             <th>Rol</th>
+                            <th>Permisos API</th>
                             <th>Estado</th>
                             <th class="col-acciones">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-usuarios">
                         <tr>
-                            <td colspan="6" class="texto-centro">Cargando usuarios...</td>
+                            <td colspan="7" class="texto-centro">Cargando usuarios...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -98,13 +99,37 @@
                 </div>
 
                 <div class="campo-grupo">
-                    <label for="campo-rol">Rol / Permisos *</label>
+                    <label for="campo-rol">Rol / Sector *</label>
                     <select id="campo-rol" required>
                         <option value="">Seleccioná un rol...</option>
                         <option value="admin">admin (Acceso total + Parámetros)</option>
                         <option value="chocolate">chocolate (Tanques + Planillas)</option>
                         <option value="golosinas">golosinas (Solo Carga Planillas)</option>
+                        <option value="programacion">programacion (Planificación / Consulta)</option>
                     </select>
+                </div>
+
+                <!-- BLOQUE DE PERMISOS POR MÉTODO API -->
+                <div class="campo-grupo">
+                    <label>Permisos de Operación (Métodos API)</label>
+                    <div class="permisos-grid">
+                        <label class="permiso-item">
+                            <input type="checkbox" id="perm-leer" checked>
+                            <span><strong>GET</strong> (Consultar)</span>
+                        </label>
+                        <label class="permiso-item">
+                            <input type="checkbox" id="perm-crear">
+                            <span><strong>POST</strong> (Crear)</span>
+                        </label>
+                        <label class="permiso-item">
+                            <input type="checkbox" id="perm-editar">
+                            <span><strong>PUT</strong> (Modificar)</span>
+                        </label>
+                        <label class="permiso-item">
+                            <input type="checkbox" id="perm-eliminar">
+                            <span><strong>DELETE</strong> (Eliminar)</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="campo-grupo campo-checkbox">
@@ -127,6 +152,13 @@
     <script>
         let listaUsuarios = [];
 
+        function headersApi(extra = {}) {
+            return {
+                'X-Usuario': usuarioActual ? usuarioActual.usuario : '',
+                ...extra
+            };
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             if (usuarioActual) {
                 const spanUser = document.getElementById('info-usuario');
@@ -140,6 +172,19 @@
             document.getElementById('btn-cancelar-modal').addEventListener('click', cerrarModal);
             document.getElementById('form-usuario').addEventListener('submit', guardarUsuario);
             document.getElementById('input-buscar').addEventListener('input', filtrarTabla);
+
+            // Sugerencia automática de permisos al elegir rol en usuario nuevo
+            document.getElementById('campo-rol').addEventListener('change', (e) => {
+                if (document.getElementById('usuario-id').value) return; // En edición respeta lo cargado
+                const rol = e.target.value;
+                if (rol === 'admin') {
+                    setearCheckboxesPermisos(true, true, true, true);
+                } else if (rol === 'chocolate' || rol === 'golosinas') {
+                    setearCheckboxesPermisos(true, true, true, false);
+                } else if (rol === 'programacion') {
+                    setearCheckboxesPermisos(true, false, false, false);
+                }
+            });
 
             const inpClave = document.getElementById('campo-clave');
             const btnOjo = document.getElementById('btn-toggle-clave');
@@ -159,10 +204,17 @@
             });
         });
 
+        function setearCheckboxesPermisos(leer, crear, editar, eliminar) {
+            document.getElementById('perm-leer').checked = Boolean(leer);
+            document.getElementById('perm-crear').checked = Boolean(crear);
+            document.getElementById('perm-editar').checked = Boolean(editar);
+            document.getElementById('perm-eliminar').checked = Boolean(eliminar);
+        }
+
         async function cargarUsuarios() {
             const tbody = document.getElementById('tbody-usuarios');
             try {
-                const resp = await fetch('/api/usuarios');
+                const resp = await fetch('/api/usuarios', { headers: headersApi() });
                 const data = await resp.json();
 
                 if (!resp.ok) {
@@ -172,8 +224,20 @@
                 listaUsuarios = data.datos || [];
                 renderizarTabla(listaUsuarios);
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="6" class="texto-centro texto-error">${err.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="texto-centro texto-error">${err.message}</td></tr>`;
             }
+        }
+
+        function renderizarBadgesPermisos(u) {
+            const lista = [
+                { label: 'GET', ok: u.puede_leer !== false },
+                { label: 'POST', ok: Boolean(u.puede_crear) },
+                { label: 'PUT', ok: Boolean(u.puede_editar) },
+                { label: 'DELETE', ok: Boolean(u.puede_eliminar) }
+            ];
+            return lista.map(p =>
+                `<span class="perm-tag ${p.ok ? 'perm-on' : 'perm-off'}">${p.label}</span>`
+            ).join(' ');
         }
 
         function renderizarTabla(datos) {
@@ -182,7 +246,7 @@
             contador.textContent = `${datos.length} usuario${datos.length === 1 ? '' : 's'}`;
 
             if (!datos.length) {
-                tbody.innerHTML = `<tr><td colspan="6" class="texto-centro">No se encontraron usuarios.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="texto-centro">No se encontraron usuarios.</td></tr>`;
                 return;
             }
 
@@ -202,6 +266,7 @@
                             <button type="button" class="btn-mini-ojo" onclick="toggleClaveFila(this)" title="Ver / Ocultar clave">👁</button>
                         </td>
                         <td>${badgeRol}</td>
+                        <td class="celda-permisos">${renderizarBadgesPermisos(u)}</td>
                         <td>${badgeEstado}</td>
                         <td class="col-acciones">
                             <button type="button" class="btn-accion btn-editar" onclick="abrirModalEditar(${u.id})">Editar</button>
@@ -248,6 +313,7 @@
             document.getElementById('ayuda-clave').hidden = true;
             document.getElementById('campo-rol').value = '';
             document.getElementById('campo-activo').checked = true;
+            setearCheckboxesPermisos(true, false, false, false);
             ocultarErrorModal();
 
             document.getElementById('modal-usuario').hidden = false;
@@ -266,8 +332,25 @@
             document.getElementById('campo-clave').required = false;
             document.getElementById('label-clave').textContent = 'Nueva Contraseña (opcional)';
             document.getElementById('ayuda-clave').hidden = false;
-            document.getElementById('campo-rol').value = (user.rol || '').toLowerCase();
+
+            const selectRol = document.getElementById('campo-rol');
+            const rolVal = (user.rol || '').toLowerCase();
+            // Si el usuario tiene un rol personalizado que no está en el select, lo agrega temporalmente
+            if (rolVal && !Array.from(selectRol.options).some(opt => opt.value === rolVal)) {
+                const opt = document.createElement('option');
+                opt.value = rolVal;
+                opt.textContent = rolVal;
+                selectRol.appendChild(opt);
+            }
+            selectRol.value = rolVal;
+
             document.getElementById('campo-activo').checked = user.activo !== false;
+            setearCheckboxesPermisos(
+                user.puede_leer !== false,
+                user.puede_crear,
+                user.puede_editar,
+                user.puede_eliminar
+            );
             ocultarErrorModal();
 
             document.getElementById('modal-usuario').hidden = false;
@@ -288,6 +371,11 @@
             const rol = document.getElementById('campo-rol').value;
             const activo = document.getElementById('campo-activo').checked;
 
+            const puede_leer = document.getElementById('perm-leer').checked;
+            const puede_crear = document.getElementById('perm-crear').checked;
+            const puede_editar = document.getElementById('perm-editar').checked;
+            const puede_eliminar = document.getElementById('perm-eliminar').checked;
+
             if (!usuario || !rol) {
                 mostrarErrorModal('Completá el usuario y el rol.');
                 return;
@@ -307,8 +395,17 @@
 
                 const resp = await fetch(url, {
                     method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ usuario, clave, rol, activo })
+                    headers: headersApi({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({
+                        usuario,
+                        clave,
+                        rol,
+                        activo,
+                        puede_leer,
+                        puede_crear,
+                        puede_editar,
+                        puede_eliminar
+                    })
                 });
 
                 const data = await resp.json();
@@ -338,7 +435,10 @@
             }
 
             try {
-                const resp = await fetch(`/api/usuarios/${id}`, { method: 'DELETE' });
+                const resp = await fetch(`/api/usuarios/${id}`, {
+                    method: 'DELETE',
+                    headers: headersApi()
+                });
                 const data = await resp.json();
 
                 if (!resp.ok) {

@@ -94,6 +94,15 @@ class RelevamientoTanqueSchema(BaseModel):
 class LoginSchema(BaseModel):
     usuario: str
     clave: str
+class UsuarioAbmSchema(BaseModel):
+    usuario: str
+    clave: Optional[str] = ""
+    rol: str
+    activo: bool = True
+    puede_leer: bool = True
+    puede_crear: bool = False
+    puede_editar: bool = False
+    puede_eliminar: bool = False
 # ==========================================
 # 1. VISTAS HTML PRINCIPALES (RUTAS DIRECTAS)
 # ==========================================
@@ -470,12 +479,15 @@ def login(payload: LoginSchema):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
 
     return {
-        "ok": True,
-        "id": user["id"],
-        "usuario": user["usuario"],
-        "rol": user["rol"],
-    }
-
+            "ok": True,
+            "id": user["id"],
+            "usuario": user["usuario"],
+            "rol": user["rol"],
+            "puede_leer": user["puede_leer"],
+            "puede_crear": user["puede_crear"],
+            "puede_editar": user["puede_editar"],
+            "puede_eliminar": user["puede_eliminar"],
+        }
 
 @app.get("/api/usuarios")
 def listar_usuarios():

@@ -4,8 +4,8 @@ from conexion import obtener_conexion
 
 def validar_usuario(usuario: str, clave: str):
     """
-    Busca el usuario en la tabla usuarios usando la conexión configurada
-    y compara la contraseña directamente.
+    Busca el usuario activo en la tabla usuarios, verifica la contraseña
+    y devuelve sus datos junto con sus permisos de acceso.
     """
     usuario_limpio = (usuario or "").strip().lower()
     clave_limpia = (clave or "").strip()
@@ -14,7 +14,8 @@ def validar_usuario(usuario: str, clave: str):
         return None
 
     sql = """
-        SELECT id, usuario, password_hash, rol
+        SELECT id, usuario, password_hash, rol, activo,
+               puede_leer, puede_crear, puede_editar, puede_eliminar
         FROM usuarios
         WHERE LOWER(TRIM(usuario)) = %s
         LIMIT 1
@@ -28,6 +29,9 @@ def validar_usuario(usuario: str, clave: str):
     if not fila:
         return None
 
+    if fila.get("activo") is False:
+        return None
+
     clave_bd = (fila.get("password_hash") or "").strip()
 
     if clave_bd == clave_limpia:
@@ -35,6 +39,10 @@ def validar_usuario(usuario: str, clave: str):
             "id": fila["id"],
             "usuario": fila["usuario"],
             "rol": fila["rol"],
+            "puede_leer": bool(fila.get("puede_leer", True)),
+            "puede_crear": bool(fila.get("puede_crear", False)),
+            "puede_editar": bool(fila.get("puede_editar", False)),
+            "puede_eliminar": bool(fila.get("puede_eliminar", False)),
         }
 
     return None
