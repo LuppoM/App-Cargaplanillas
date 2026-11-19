@@ -5,7 +5,7 @@ from conexion import obtener_conexion
 def validar_usuario(usuario: str, clave: str):
     """
     Busca el usuario activo en la tabla usuarios, verifica la contraseña
-    y devuelve sus datos junto con sus permisos de acceso.
+    y devuelve sus datos junto con sus permisos de acceso y módulos visibles.
     """
     usuario_limpio = (usuario or "").strip().lower()
     clave_limpia = (clave or "").strip()
@@ -15,7 +15,7 @@ def validar_usuario(usuario: str, clave: str):
 
     sql = """
         SELECT id, usuario, password_hash, rol, activo,
-               puede_leer, puede_crear, puede_editar, puede_eliminar
+               puede_leer, puede_crear, puede_editar, puede_eliminar, modulos
         FROM usuarios
         WHERE LOWER(TRIM(usuario)) = %s
         LIMIT 1
@@ -43,6 +43,7 @@ def validar_usuario(usuario: str, clave: str):
             "puede_crear": bool(fila.get("puede_crear", False)),
             "puede_editar": bool(fila.get("puede_editar", False)),
             "puede_eliminar": bool(fila.get("puede_eliminar", False)),
+            "modulos": fila.get("modulos") or "",
         }
 
     return None
