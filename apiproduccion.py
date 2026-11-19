@@ -103,6 +103,7 @@ class UsuarioAbmSchema(BaseModel):
     puede_crear: bool = False
     puede_editar: bool = False
     puede_eliminar: bool = False
+    modulos: Optional[str] = ""
 # ==========================================
 # 1. VISTAS HTML PRINCIPALES (RUTAS DIRECTAS)
 # ==========================================
