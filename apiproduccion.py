@@ -430,7 +430,7 @@ def borrar_relevamiento_tanque(relevamiento_id: int):
 @app.get("/api/ntanque/pdf/cantidad/{id_relevamiento}")
 def pdf_cantidad_tanques(id_relevamiento: int):
     try:
-        relevamiento = nivelestanquemodelo.obtener_por_id(id_relevamiento)
+        relevamiento = nivelestanquemodelo.obtener_relevamiento_por_id(id_relevamiento)
         if not relevamiento:
             raise HTTPException(status_code=404, detail="Relevamiento no encontrado")
 
