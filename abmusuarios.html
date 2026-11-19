@@ -99,14 +99,15 @@
                 </div>
 
                 <div class="campo-grupo">
-                    <label for="campo-rol">Rol / Sector *</label>
-                    <select id="campo-rol" required>
-                        <option value="">Seleccioná un rol...</option>
-                        <option value="admin">admin (Acceso total + Parámetros)</option>
-                        <option value="chocolate">chocolate (Tanques + Planillas)</option>
-                        <option value="golosinas">golosinas (Solo Carga Planillas)</option>
-                        <option value="programacion">programacion (Planificación / Consulta)</option>
-                    </select>
+                    <label for="campo-rol">Rol / Puesto *</label>
+                    <input type="text" id="campo-rol" list="lista-roles-sugeridos" required placeholder="Ej: Programación, Supervisor, Admin...">
+                    <datalist id="lista-roles-sugeridos">
+                        <option value="admin">
+                        <option value="chocolate">
+                        <option value="golosinas">
+                        <option value="programacion">
+                        <option value="supervisor">
+                    </datalist>
                 </div>
 
                 <!-- BLOQUE DE PERMISOS POR MÉTODO API -->
