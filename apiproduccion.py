@@ -469,14 +469,14 @@ def modificar_relevamiento_tanque(relevamiento_id: int, payload: RelevamientoTan
         raise HTTPException(status_code=500, detail=f"Error al actualizar el relevamiento: {str(e)}")
 
 
-@app.delete("/api/ntanque/{relevamiento_id}")
-def borrar_relevamiento_tanque(relevamiento_id: int):
-    registro = nivelestanquemodelo.obtener_relevamiento_por_id(relevamiento_id)
+@app.delete("/api/ntanque/{id_relevamiento}")
+def borrar_relevamiento_tanque(id_relevamiento: int):
+    registro = nivelestanquemodelo.obtener_relevamiento_por_id(id_relevamiento)
     if not registro:
         raise HTTPException(status_code=404, detail="El relevamiento a eliminar no existe")
 
     try:
-        nivelestanquemodelo.eliminar_relevamiento(relevamiento_id)
+        nivelestanquemodelo.eliminar_relevamiento(id_relevamiento)
         return {"ok": True, "mensaje": "Relevamiento eliminado correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al borrar el relevamiento: {str(e)}")
@@ -488,7 +488,7 @@ def pdf_cantidad_tanques(id_relevamiento: int):
         if not relevamiento:
             raise HTTPException(status_code=404, detail="Relevamiento no encontrado")
 
-        pdf_bytes =cantidadentanques.g(relevamiento)
+        pdf_bytes = cantidadentanques.generar_pdf_cantidad(relevamiento)
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
