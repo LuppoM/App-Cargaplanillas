@@ -123,7 +123,7 @@
                         </div>
                         <div class="form-group">
                             <label>Peso Promedio Unid (kg)</label>
-                            <input type="number" step="0.0001" id="peso_promedio_unid_kg" value="0">
+                            <input type="number" step="0.0001" id="peso_promedio_unid_kg" value="0" oninput="calcularKPIsEnTiempoReal()">
                         </div>
                         <div class="form-group">
                             <label>Decomiso (kg)</label>
@@ -349,8 +349,8 @@
             const jsonSec = await resSec.json();
             const jsonTeor = await resTeor.json();
 
-            listaSectoresGlobal = jsonSec.datos || [];
-            listaTeoricosGlobal = jsonTeor.datos || [];
+            listaSectoresGlobal = Array.isArray(jsonSec) ? jsonSec : (jsonSec.datos || []);
+            listaTeoricosGlobal = Array.isArray(jsonTeor) ? jsonTeor : (jsonTeor.datos || []);
         } catch (e) {
             console.error("Error al cargar auxiliares:", e);
         }
@@ -378,7 +378,7 @@
         try {
             const res = await fetch(`/api/planillas?planta=${encodeURIComponent(plantaActual)}`);
             const resJson = await res.json();
-            datosGlobales = resJson.datos || [];
+            datosGlobales = Array.isArray(resJson) ? resJson : (resJson.datos || []);
             renderizarTabla();
         } catch (e) {
             console.error("Error al cargar planillas:", e);
@@ -388,24 +388,45 @@
     function obtenerTeoricoValido(codigo, centroTrabajo) {
         const cod = String(codigo || '').trim().toLowerCase();
         const sec = String(centroTrabajo || '').trim().toLowerCase();
-        if (!cod || !sec) return null;
+        if (!cod) return null;
 
-        return listaTeoricosGlobal.find(t => {
-            const codMatch = String(t.codigo || '').trim().toLowerCase() === cod;
-            const secTeor = String(t.centro_trabajo || t.sector || '').trim().toLowerCase();
-            return codMatch && secTeor === sec;
-        }) || null;
+        if (sec) {
+            const exacto = listaTeoricosGlobal.find(t => {
+                const codMatch = String(t.codigo || '').trim().toLowerCase() === cod;
+                const secTeor = String(t.centro_trabajo || t.sector || '').trim().toLowerCase();
+                return codMatch && secTeor === sec;
+            });
+            if (exacto) return exacto;
+        }
+
+        return listaTeoricosGlobal.find(t => String(t.codigo || '').trim().toLowerCase() === cod) || null;
+    }
+
+    function calcularKgRealesDesdeInput(valorIngresado, pesoPromUnid, teorico) {
+        const cantidad = parseFloat(valorIngresado) || 0;
+        if (!teorico) return cantidad;
+
+        const uxb = parseFloat(teorico.uxb) || 0;
+        const peso = (parseFloat(pesoPromUnid) > 0)
+            ? parseFloat(pesoPromUnid)
+            : (parseFloat(teorico.peso) || 0);
+
+        const pesoPorCaja = uxb * peso;
+        if (pesoPorCaja > 0 && uxb > 1) {
+            return cantidad * pesoPorCaja;
+        }
+
+        return cantidad;
     }
 
     function calcularKPIs(item) {
         const hsTrab = parseFloat(item.horas_trabajadas) || 0;
-        const kgReales = parseFloat(item.kg_cajas_reales) || 0;
         const decomisoKg = parseFloat(item.decomiso_kg) || 0;
         const reprocesoKg = parseFloat(item.reproceso_kg) || 0;
         const scrapKg = parseFloat(item.scrap_flex_kg) || 0;
 
-        const teorico = obtenerTeoricoValido(item.codigo, item.centro_trabajo) ||
-                        listaTeoricosGlobal.find(t => String(t.codigo).trim().toLowerCase() === String(item.codigo).trim().toLowerCase());
+        const teorico = obtenerTeoricoValido(item.codigo, item.centro_trabajo);
+        const kgReales = calcularKgRealesDesdeInput(item.kg_cajas_reales, item.peso_promedio_unid_kg, teorico);
         
         let kgTeorico = 0;
         if (teorico) {
@@ -415,7 +436,9 @@
             kgTeorico = uxb * peso * bultosHora * hsTrab;
 
             const dotTeorica = parseFloat(item.dotacion_teorica) || 0;
-            const dotReal = parseFloat(item.dotacion_real) || dotTeorica;
+            const dotReal = (item.dotacion_real !== null && item.dotacion_real !== undefined && item.dotacion_real !== "")
+                ? (parseFloat(item.dotacion_real) || 0)
+                : dotTeorica;
             if (dotTeorica > 0 && dotReal > 0) {
                 kgTeorico = kgTeorico * (dotReal / dotTeorica);
             }
@@ -443,6 +466,7 @@
         const incidenciaPct = hsTrab > 0 ? ((hsDetencion / hsTrab) * 100) : 0;
 
         return {
+            kgReales: kgReales.toFixed(2),
             kgTeorico: kgTeorico.toFixed(2),
             eficRealPct: eficRealPct.toFixed(1),
             reprocesoPct: reprocesoPct.toFixed(2),
@@ -454,7 +478,8 @@
 
     function calcularKPIsEnTiempoReal() {
         const hsTrab = parseFloat(document.getElementById('horas_trabajadas').value) || 0;
-        const kgReales = parseFloat(document.getElementById('kg_cajas_reales').value) || 0;
+        const valorIngresado = parseFloat(document.getElementById('kg_cajas_reales').value) || 0;
+        const pesoPromUnid = parseFloat(document.getElementById('peso_promedio_unid_kg').value) || 0;
         const decomisoKg = parseFloat(document.getElementById('decomiso_kg').value) || 0;
         const reprocesoKg = parseFloat(document.getElementById('reproceso_kg').value) || 0;
         const scrapKg = parseFloat(document.getElementById('scrap_flex_kg').value) || 0;
@@ -467,6 +492,7 @@
         const centroTrabajo = document.getElementById('centro_trabajo').value.trim();
 
         const teorico = obtenerTeoricoValido(codigo, centroTrabajo);
+        const kgReales = calcularKgRealesDesdeInput(valorIngresado, pesoPromUnid, teorico);
         
         let kgTeorico = 0;
         if (teorico) {
@@ -539,7 +565,7 @@
         const inputFecha = document.getElementById("fecha");
         const selectTurno = document.getElementById("turno");
 
-        if (inputFecha) inputFecha.value = `${dd}-${mm}-${yyyy}`;
+        if (inputFecha) inputFecha.value = `${yyyy}-${mm}-${dd}`;
         if (selectTurno) selectTurno.value = turno;
     }
 
@@ -567,7 +593,7 @@
                 <td>${item.codigo}</td>
                 <td>${item.turno}</td>
                 <td>${item.horas_trabajadas}</td>
-                <td>${item.kg_cajas_reales}</td>
+                <td>${kpi.kgReales}</td>
                 <td>${kpi.kgTeorico}</td>
                 <td><strong>${kpi.eficRealPct}%</strong></td>
                 <td>${kpi.decomisoPct}%</td>
@@ -774,7 +800,13 @@
         const codigoVal = document.getElementById('codigo').value.trim();
         const sectorVal = document.getElementById('centro_trabajo').value;
 
-        if (!obtenerTeoricoValido(codigoVal, sectorVal)) {
+        const teoricoExacto = listaTeoricosGlobal.find(t => {
+            const codMatch = String(t.codigo || '').trim().toLowerCase() === codigoVal.toLowerCase();
+            const secTeor = String(t.centro_trabajo || t.sector || '').trim().toLowerCase();
+            return codMatch && secTeor === sectorVal.toLowerCase();
+        });
+
+        if (!teoricoExacto) {
             alert("El código ingresado no corresponde al Centro de Trabajo seleccionado (o no existe en teóricos). Verificá el sector y el código antes de guardar.");
             return;
         }
