@@ -181,8 +181,8 @@ def vista_ntanque(request: Request):
 def vista_ntanque(request: Request):
     return templates.TemplateResponse(request, "abmusuarios.html", {})
 
-@app.get("/CONTROLDECOMISO", response_class=HTMLResponse)
-def vista_ntanque(request: Request):
+@app.get("/controldecomiso", response_class=HTMLResponse)
+def vista_controldecomiso(request: Request):
     return templates.TemplateResponse(request, "controldecomiso.html", {})
 
 

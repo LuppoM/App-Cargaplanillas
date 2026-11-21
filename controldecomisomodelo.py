@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from conexion import obtener_conexion, devolver_conexion
+from conexion import obtener_conexion
 
 
 MOTIVOS_SUGERIDOS = [
@@ -30,33 +30,30 @@ def calcular_datos_fecha(fecha_str: str) -> Dict[str, int]:
     }
 
 
-def obtener_sectores_chocolate(conn=None) -> List[str]:
+def _consultar_sectores_chocolate(cur) -> List[str]:
+    """Consulta interna usando cursor activo."""
+    cur.execute(
+        """
+        SELECT DISTINCT TRIM(nombre)
+        FROM public.sectores
+        WHERE activo = TRUE
+          AND LOWER(TRIM(planta)) LIKE 'chocolate%'
+          AND nombre IS NOT NULL
+          AND TRIM(nombre) <> ''
+        ORDER BY 1
+        """
+    )
+    sectores = [r[0] for r in cur.fetchall()]
+    if not any(s.lower() == "sin identificacion" for s in sectores):
+        sectores.append("Sin identificacion")
+    return sectores
+
+
+def obtener_sectores_chocolate() -> List[str]:
     """Trae los sectores activos de planta Chocolate directamente desde public.sectores."""
-    cerrar = False
-    if conn is None:
-        conn = obtener_conexion()
-        cerrar = True
-    try:
+    with obtener_conexion() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT DISTINCT TRIM(nombre)
-                FROM public.sectores
-                WHERE activo = TRUE
-                  AND LOWER(TRIM(planta)) LIKE 'chocolate%'
-                  AND nombre IS NOT NULL
-                  AND TRIM(nombre) <> ''
-                ORDER BY 1
-                """
-            )
-            sectores = [r[0] for r in cur.fetchall()]
-        # Agregamos 'Sin identificacion' si no existe en sectores para poder imputar decomisos generales
-        if not any(s.lower() == "sin identificacion" for s in sectores):
-            sectores.append("Sin identificacion")
-        return sectores
-    finally:
-        if cerrar:
-            devolver_conexion(conn)
+            return _consultar_sectores_chocolate(cur)
 
 
 def listar_decomisos(
@@ -65,8 +62,7 @@ def listar_decomisos(
     sector: Optional[str] = None,
     limite: int = 300,
 ) -> List[Dict[str, Any]]:
-    conn = obtener_conexion()
-    try:
+    with obtener_conexion() as conn:
         with conn.cursor() as cur:
             condiciones = ["LOWER(TRIM(planta)) LIKE 'chocolate%'"]
             params: List[Any] = []
@@ -113,8 +109,6 @@ def listar_decomisos(
                 }
                 for f in filas
             ]
-    finally:
-        devolver_conexion(conn)
 
 
 def registrar_decomiso(datos: Dict[str, Any]) -> Dict[str, Any]:
@@ -140,26 +134,24 @@ def registrar_decomiso(datos: Dict[str, Any]) -> Dict[str, Any]:
     if peso <= 0:
         raise ValueError("El peso debe ser mayor a 0.")
 
-    conn = obtener_conexion()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO public.decomisos
-                    (fecha, codigo, motivo, sector, peso, responsable, n_semana, anio, mes, planta, creado_por)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-                """,
-                (fecha, codigo, motivo, sector, peso, responsable, n_semana, anio, mes, planta, creado_por),
-            )
-            nuevo_id = cur.fetchone()[0]
-        conn.commit()
-        return {"ok": True, "id": nuevo_id, "n_semana": n_semana, "anio": anio, "mes": mes}
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        devolver_conexion(conn)
+    with obtener_conexion() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO public.decomisos
+                        (fecha, codigo, motivo, sector, peso, responsable, n_semana, anio, mes, planta, creado_por)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (fecha, codigo, motivo, sector, peso, responsable, n_semana, anio, mes, planta, creado_por),
+                )
+                nuevo_id = cur.fetchone()[0]
+            conn.commit()
+            return {"ok": True, "id": nuevo_id, "n_semana": n_semana, "anio": anio, "mes": mes}
+        except Exception:
+            conn.rollback()
+            raise
 
 
 def actualizar_decomiso(id_decomiso: int, datos: Dict[str, Any]) -> bool:
@@ -169,67 +161,63 @@ def actualizar_decomiso(id_decomiso: int, datos: Dict[str, Any]) -> bool:
     anio = int(datos.get("anio") or info_fecha["anio"])
     mes = int(datos.get("mes") or info_fecha["mes"])
 
-    conn = obtener_conexion()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE public.decomisos
-                SET fecha = %s,
-                    codigo = %s,
-                    motivo = %s,
-                    sector = %s,
-                    peso = %s,
-                    responsable = %s,
-                    n_semana = %s,
-                    anio = %s,
-                    mes = %s
-                WHERE id = %s
-                """,
-                (
-                    fecha,
-                    str(datos.get("codigo") or "").strip(),
-                    str(datos.get("motivo") or "").strip(),
-                    str(datos.get("sector") or "").strip(),
-                    float(datos.get("peso") or 0),
-                    str(datos.get("responsable") or "").strip(),
-                    n_semana,
-                    anio,
-                    mes,
-                    id_decomiso,
-                ),
-            )
-            actualizado = cur.rowcount > 0
-        conn.commit()
-        return actualizado
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        devolver_conexion(conn)
+    with obtener_conexion() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE public.decomisos
+                    SET fecha = %s,
+                        codigo = %s,
+                        motivo = %s,
+                        sector = %s,
+                        peso = %s,
+                        responsable = %s,
+                        n_semana = %s,
+                        anio = %s,
+                        mes = %s
+                    WHERE id = %s
+                    """,
+                    (
+                        fecha,
+                        str(datos.get("codigo") or "").strip(),
+                        str(datos.get("motivo") or "").strip(),
+                        str(datos.get("sector") or "").strip(),
+                        float(datos.get("peso") or 0),
+                        str(datos.get("responsable") or "").strip(),
+                        n_semana,
+                        anio,
+                        mes,
+                        id_decomiso,
+                    ),
+                )
+                actualizado = cur.rowcount > 0
+            conn.commit()
+            return actualizado
+        except Exception:
+            conn.rollback()
+            raise
 
 
 def eliminar_decomiso(id_decomiso: int) -> bool:
-    conn = obtener_conexion()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM public.decomisos WHERE id = %s", (id_decomiso,))
-            eliminado = cur.rowcount > 0
-        conn.commit()
-        return eliminado
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        devolver_conexion(conn)
+    with obtener_conexion() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM public.decomisos WHERE id = %s", (id_decomiso,))
+                eliminado = cur.rowcount > 0
+            conn.commit()
+            return eliminado
+        except Exception:
+            conn.rollback()
+            raise
 
 
 def obtener_opciones_formulario() -> Dict[str, List[str]]:
     """Devuelve sectores activos de planta Chocolate, motivos y responsables para autocompletar."""
-    conn = obtener_conexion()
-    try:
-        sectores = obtener_sectores_chocolate(conn)
+    with obtener_conexion() as conn:
         with conn.cursor() as cur:
+            sectores = _consultar_sectores_chocolate(cur)
+
             cur.execute("SELECT DISTINCT TRIM(motivo) FROM public.decomisos WHERE motivo IS NOT NULL AND TRIM(motivo) <> '' ORDER BY 1")
             motivos_bd = [r[0] for r in cur.fetchall()]
 
@@ -246,8 +234,6 @@ def obtener_opciones_formulario() -> Dict[str, List[str]]:
             "responsables": responsables_bd,
             "codigos": codigos_bd,
         }
-    finally:
-        devolver_conexion(conn)
 
 
 def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
@@ -255,16 +241,14 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
     Cruza Kg elaborados (tabla planillas) vs Kg decomiso (tabla decomisos)
     para todos los sectores activos de planta Chocolate en public.sectores.
     """
-    conn = obtener_conexion()
-    try:
-        sectores_choco = obtener_sectores_chocolate(conn)
-        # Mapa case-insensitive -> nombre oficial en public.sectores
-        mapa_oficial = {s.lower(): s for s in sectores_choco}
-
-        kg_elaborados_map: Dict[str, float] = {s: 0.0 for s in sectores_choco}
-        kg_decomiso_map: Dict[str, float] = {s: 0.0 for s in sectores_choco}
-
+    with obtener_conexion() as conn:
         with conn.cursor() as cur:
+            sectores_choco = _consultar_sectores_chocolate(cur)
+            mapa_oficial = {s.lower(): s for s in sectores_choco}
+
+            kg_elaborados_map: Dict[str, float] = {s: 0.0 for s in sectores_choco}
+            kg_decomiso_map: Dict[str, float] = {s: 0.0 for s in sectores_choco}
+
             # 1. Detectar nombres de columnas en public.planillas
             cur.execute(
                 """
@@ -275,8 +259,8 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
             )
             cols_planillas = {r[0].lower() for r in cur.fetchall()}
 
-            col_linea = "linea" if "linea" in cols_planillas else ("sector" if "sector" in cols_planillas else None)
-            col_kg = "produccion_kg" if "produccion_kg" in cols_planillas else ("kg_producidos" if "kg_producidos" in cols_planillas else None)
+            col_linea = "linea" if "linea" in cols_planillas else ("sector" if "sector" in cols_planillas else ("centro_trabajo" if "centro_trabajo" in cols_planillas else None))
+            col_kg = "produccion_kg" if "produccion_kg" in cols_planillas else ("kg_producidos" if "kg_producidos" in cols_planillas else ("kg_cajas_reales" if "kg_cajas_reales" in cols_planillas else None))
             col_sem = "n_semana" if "n_semana" in cols_planillas else ("semana" if "semana" in cols_planillas else None)
             col_anio = "anio" if "anio" in cols_planillas else ("año" if "año" in cols_planillas else None)
             filtro_planta = "AND LOWER(TRIM(planta)) LIKE 'chocolate%'" if "planta" in cols_planillas else ""
@@ -316,7 +300,6 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
                 if key in mapa_oficial:
                     kg_decomiso_map[mapa_oficial[key]] += peso_f
                 else:
-                    # Si hay algún registro histórico con otro nombre, lo sumamos en Sin identificacion
                     sin_id = mapa_oficial.get("sin identificacion", "Sin identificacion")
                     kg_decomiso_map[sin_id] += peso_f
 
@@ -349,5 +332,3 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
             "total_decomiso": total_decomiso,
             "porcentaje_total": pct_total,
         }
-    finally:
-        devolver_conexion(conn)
