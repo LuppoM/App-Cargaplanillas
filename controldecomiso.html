@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Decomisos - Chocolates</title>
+    <link rel="icon" type="image/x-icon" href="/static/icono.ico">
+    <link rel="stylesheet" href="/static/controldecomisovista.css">
+</head>
+<body>
+
+    <div class="topbar">
+        <h1>CONTROL Y RELEVAMIENTO DE DECOMISOS · CHOCOLATES</h1>
+        <div class="topbar-actions">
+            <button type="button" class="btn btn-pdf" onclick="descargarPdfInforme()">📄 Generar PDF Informe</button>
+            <a href="/" class="btn btn-volver">⬅ Volver al Inicio</a>
+        </div>
+    </div>
+
+    <!-- Barra de filtros semanales -->
+    <div class="filtros-card">
+        <div class="campo">
+            <label for="filtroAnio">Año</label>
+            <input type="number" id="filtroAnio" min="2024" max="2035" style="width: 100px;" onchange="cargarTodo()">
+        </div>
+        <div class="campo">
+            <label for="filtroSemana">Semana</label>
+            <input type="number" id="filtroSemana" min="1" max="53" style="width: 95px;" onchange="cargarTodo()">
+        </div>
+        <div class="campo">
+            <label for="filtroSector">Filtrar Listado por Sector</label>
+            <select id="filtroSector" onchange="cargarTodo()">
+                <option value="TODOS">Todos los sectores</option>
+            </select>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="cargarTodo()">🔍 Consultar Semana</button>
+    </div>
+
+    <!-- Tarjetas Resumen -->
+    <div class="kpis-grid">
+        <div class="kpi-card">
+            <div class="kpi-titulo">Kg Elaborados (Semana <span id="lblSem1">-</span>)</div>
+            <div class="kpi-valor" id="kpiElaborados">0,00 kg</div>
+        </div>
+        <div class="kpi-card kpi-deco">
+            <div class="kpi-titulo">Kg Decomiso Total</div>
+            <div class="kpi-valor" id="kpiDecomiso">0,0 kg</div>
+        </div>
+        <div class="kpi-card kpi-pct">
+            <div class="kpi-titulo">% Decomiso General</div>
+            <div class="kpi-valor" id="kpiPorcentaje">0,00 %</div>
+        </div>
+    </div>
+
+    <div class="main-grid">
+        <!-- COLUMNA IZQUIERDA: CARGA Y REGISTROS (TABLA DECOMISOS) -->
+        <div class="panel">
+            <h2>
+                <span id="tituloForm">Registro Diario de Decomiso</span>
+                <small id="infoSemanaForm" style="color: #6b7280; font-weight: 600;"></small>
+            </h2>
+
+            <form id="formDecomiso" onsubmit="guardarDecomiso(event)">
+                <input type="hidden" id="editId" value="">
+                <div class="form-grid">
+                    <div class="campo">
+                        <label for="fecha">Fecha *</label>
+                        <input type="date" id="fecha" required onchange="actualizarInfoFecha()">
+                    </div>
+                    <div class="campo">
+                        <label for="sector">Sector (Chocolates) *</label>
+                        <select id="sector" required></select>
+                    </div>
+                    <div class="campo">
+                        <label for="peso">Peso (Kg) *</label>
+                        <input type="number" id="peso" step="0.001" min="0.001" placeholder="Ej: 8.50" required>
+                    </div>
+                    <div class="campo">
+                        <label for="codigo">Código Producto</label>
+                        <input type="text" id="codigo" list="listaCodigos" placeholder="Ej: 6020008">
+                        <datalist id="listaCodigos"></datalist>
+                    </div>
+                    <div class="campo">
+                        <label for="motivo">Motivo *</label>
+                        <input type="text" id="motivo" list="listaMotivos" placeholder="Ej: Piso, Limpieza..." required>
+                        <datalist id="listaMotivos"></datalist>
+                    </div>
+                    <div class="campo">
+                        <label for="responsable">Responsable</label>
+                        <input type="text" id="responsable" list="listaResponsables" placeholder="Apellido / Nombre">
+                        <datalist id="listaResponsables"></datalist>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-sec" id="btnCancelarEdicion" style="display: none;" onclick="cancelarEdicion()">Cancelar Edición</button>
+                    <button type="submit" class="btn btn-primary" id="btnGuardar">💾 Guardar Registro</button>
+                </div>
+            </form>
+
+            <div class="tabla-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Código</th>
+                            <th>Sector</th>
+                            <th>Motivo</th>
+                            <th class="num">Peso (Kg)</th>
+                            <th>Responsable</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyRegistros">
+                        <tr><td colspan="7" style="text-align:center;">Cargando registros...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: RESUMEN POR SECTOR (INFORME SEMANAL) -->
+        <div class="panel">
+            <h2>
+                <span>Consolidado Semanal por Sector</span>
+                <small id="lblSubtituloResumen" style="color: #6b7280;"></small>
+            </h2>
+
+            <div class="tabla-scroll" style="max-height: 620px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>SECTOR</th>
+                            <th class="num">Kg elaborados</th>
+                            <th class="num">Kg decomiso</th>
+                            <th class="num">Porcentaje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyResumen">
+                        <tr><td colspan="4" style="text-align:center;">Cargando resumen...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const sesionRaw = sessionStorage.getItem('usuario_sesion');
+        if (!sesionRaw) {
+            window.location.replace('/login');
+        }
+        const usuarioActual = sesionRaw ? JSON.parse(sesionRaw) : {};
+
+        function obtenerSemanaExcel(fechaStr) {
+            const [y, m, d] = fechaStr.split('-').map(Number);
+            const fecha = new Date(y, m - 1, d);
+            const inicioAnio = new Date(y, 0, 1);
+            const diaSemanaInicio = inicioAnio.getDay(); // 0 = Domingo
+            const diasTranscurridos = Math.floor((fecha - inicioAnio) / 86400000);
+            const nSemana = Math.floor((diasTranscurridos + diaSemanaInicio) / 7) + 1;
+            return { anio: y, mes: m, n_semana: nSemana };
+        }
+
+        function formatearNum(val, dec = 2) {
+            return Number(val || 0).toLocaleString('es-AR', {
+                minimumFractionDigits: dec,
+                maximumFractionDigits: dec
+            });
+        }
+
+        function actualizarInfoFecha() {
+            const f = document.getElementById('fecha').value;
+            if (!f) return;
+            const info = obtenerSemanaExcel(f);
+            document.getElementById('infoSemanaForm').innerText = `Año ${info.anio} · Semana ${info.n_semana}`;
+        }
+
+        async function cargarOpciones() {
+            const res = await fetch('/api/decomisos/opciones');
+            const data = await res.json();
+
+            const selSector = document.getElementById('sector');
+            const selFiltro = document.getElementById('filtroSector');
+            selSector.innerHTML = '<option value="" disabled selected>Seleccionar sector...</option>';
+            selFiltro.innerHTML = '<option value="TODOS">Todos los sectores</option>';
+
+            (data.sectores || []).forEach(sec => {
+                selSector.innerHTML += `<option value="${sec}">${sec}</option>`;
+                selFiltro.innerHTML += `<option value="${sec}">${sec}</option>`;
+            });
+
+            document.getElementById('listaMotivos').innerHTML = (data.motivos || []).map(m => `<option value="${m}">`).join('');
+            document.getElementById('listaResponsables').innerHTML = (data.responsables || []).map(r => `<option value="${r}">`).join('');
+            document.getElementById('listaCodigos').innerHTML = (data.codigos || []).map(c => `<option value="${c}">`).join('');
+        }
+
+        async function cargarTodo() {
+            const anio = document.getElementById('filtroAnio').value;
+            const semana = document.getElementById('filtroSemana').value;
+            const sector = document.getElementById('filtroSector').value;
+
+            document.getElementById('lblSem1').innerText = semana;
+            document.getElementById('lblSubtituloResumen').innerText = `Año ${anio} · Semana ${semana}`;
+
+            const [resList, resRes] = await Promise.all([
+                fetch(`/api/decomisos?anio=${anio}&n_semana=${semana}&sector=${encodeURIComponent(sector)}`),
+                fetch(`/api/decomisos/resumen?anio=${anio}&n_semana=${semana}`)
+            ]);
+
+            const registros = await resList.json();
+            const resumen = await resRes.json();
+
+            renderizarRegistros(registros);
+            renderizarResumen(resumen);
+        }
+
+        function renderizarRegistros(lista) {
+            const tbody = document.getElementById('tbodyRegistros');
+            if (!lista.length) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#6b7280;">No hay decomisos cargados para esta semana.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = lista.map(r => `
+                <tr>
+                    <td>${r.fecha}</td>
+                    <td>${r.codigo || '-'}</td>
+                    <td><strong>${r.sector}</strong></td>
+                    <td>${r.motivo}</td>
+                    <td class="num">${formatearNum(r.peso, 2)}</td>
+                    <td>${r.responsable || '-'}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-edit" onclick='editarRegistro(${JSON.stringify(r)})'>✏️</button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="eliminarRegistro(${r.id})">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderizarResumen(data) {
+            document.getElementById('kpiElaborados').innerText = `${formatearNum(data.total_elaborados, 2)} kg`;
+            document.getElementById('kpiDecomiso').innerText = `${formatearNum(data.total_decomiso, 1)} kg`;
+            document.getElementById('kpiPorcentaje').innerText = `${formatearNum(data.porcentaje_total, 2)} %`;
+
+            const tbody = document.getElementById('tbodyResumen');
+            let html = (data.filas || []).map(f => {
+                let pctHtml = '-';
+                if (f.porcentaje !== null && f.porcentaje !== undefined) {
+                    const cls = f.porcentaje > 1.0 ? 'badge-pct-alto' : 'badge-pct-ok';
+                    pctHtml = `<span class="${cls}">${formatearNum(f.porcentaje, 2)}%</span>`;
+                }
+                return `
+                    <tr>
+                        <td><strong>${f.sector}</strong></td>
+                        <td class="num">${formatearNum(f.kg_elaborados, 2)}</td>
+                        <td class="num">${formatearNum(f.kg_decomiso, 1)}</td>
+                        <td class="num">${pctHtml}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            html += `
+                <tr class="fila-total">
+                    <td>KG TOTALES</td>
+                    <td class="num">${formatearNum(data.total_elaborados, 2)}</td>
+                    <td class="num">${formatearNum(data.total_decomiso, 1)}</td>
+                    <td class="num">${formatearNum(data.porcentaje_total, 2)}%</td>
+                </tr>
+            `;
+            tbody.innerHTML = html;
+        }
+
+        async function guardarDecomiso(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editId').value;
+            const fecha = document.getElementById('fecha').value;
+            const info = obtenerSemanaExcel(fecha);
+
+            const payload = {
+                fecha: fecha,
+                codigo: document.getElementById('codigo').value,
+                motivo: document.getElementById('motivo').value,
+                sector: document.getElementById('sector').value,
+                peso: parseFloat(document.getElementById('peso').value),
+                responsable: document.getElementById('responsable').value,
+                n_semana: info.n_semana,
+                anio: info.anio,
+                mes: info.mes,
+                planta: 'Chocolate',
+                creado_por: usuarioActual.usuario || usuarioActual.nombre || ''
+            };
+
+            const url = editId ? `/api/decomisos/${editId}` : '/api/decomisos';
+            const method = editId ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                alert(err.detail || 'Error al guardar el decomiso');
+                return;
+            }
+
+            document.getElementById('filtroAnio').value = info.anio;
+            document.getElementById('filtroSemana').value = info.n_semana;
+            cancelarEdicion();
+            await cargarOpciones();
+            await cargarTodo();
+        }
+
+        function editarRegistro(reg) {
+            document.getElementById('editId').value = reg.id;
+            document.getElementById('fecha').value = reg.fecha;
+            document.getElementById('codigo').value = reg.codigo || '';
+            document.getElementById('sector').value = reg.sector;
+            document.getElementById('motivo').value = reg.motivo;
+            document.getElementById('peso').value = reg.peso;
+            document.getElementById('responsable').value = reg.responsable || '';
+            document.getElementById('tituloForm').innerText = `Editando Registro #${reg.id}`;
+            document.getElementById('btnGuardar').innerText = '✅ Actualizar Registro';
+            document.getElementById('btnCancelarEdicion').style.display = 'inline-flex';
+            actualizarInfoFecha();
+        }
+
+        function cancelarEdicion() {
+            document.getElementById('editId').value = '';
+            document.getElementById('codigo').value = '';
+            document.getElementById('motivo').value = '';
+            document.getElementById('peso').value = '';
+            document.getElementById('tituloForm').innerText = 'Registro Diario de Decomiso';
+            document.getElementById('btnGuardar').innerText = '💾 Guardar Registro';
+            document.getElementById('btnCancelarEdicion').style.display = 'none';
+        }
+
+        async function eliminarRegistro(id) {
+            if (!confirm('¿Eliminar este registro de decomiso?')) return;
+            const res = await fetch(`/api/decomisos/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                await cargarTodo();
+            }
+        }
+
+        function descargarPdfInforme() {
+            const anio = document.getElementById('filtroAnio').value;
+            const semana = document.getElementById('filtroSemana').value;
+            window.open(`/api/decomisos/pdf?anio=${anio}&n_semana=${semana}`, '_blank');
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const hoy = new Date().toISOString().slice(0, 10);
+            document.getElementById('fecha').value = hoy;
+            const infoHoy = obtenerSemanaExcel(hoy);
+            document.getElementById('filtroAnio').value = infoHoy.anio;
+            document.getElementById('filtroSemana').value = infoHoy.n_semana;
+            actualizarInfoFecha();
+
+            await cargarOpciones();
+            await cargarTodo();
+        });
+    </script>
+</body>
+</html>

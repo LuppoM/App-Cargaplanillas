@@ -20,7 +20,7 @@ from pydantic import BaseModel
 import usuariosmodelo
 from abmusuariosmodelo import abmusuariosmodelo
 import cantidadentanques
-
+import controldecomisomodelo
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 
@@ -180,6 +180,11 @@ def vista_ntanque(request: Request):
 @app.get("/abmusuarios", response_class=HTMLResponse)
 def vista_ntanque(request: Request):
     return templates.TemplateResponse(request, "abmusuarios.html", {})
+
+@app.get("/CONTROLDECOMISO", response_class=HTMLResponse)
+def vista_ntanque(request: Request):
+    return templates.TemplateResponse(request, "controldecomiso.html", {})
+
 
 # ==========================================
 # 2. MÓDULO: TEÓRICOS (ENDPOINTS DE API)
@@ -578,4 +583,52 @@ def login(payload: LoginSchema):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en login: {str(e)}")
-    
+
+@app.get("/api/decomisos/opciones")
+def api_decomisos_opciones():
+    return controldecomisomodelo.obtener_opciones_formulario()
+
+
+@app.get("/api/decomisos/resumen")
+def api_decomisos_resumen(anio: int, n_semana: int):
+    return controldecomisomodelo.obtener_resumen_semanal(anio=anio, n_semana=n_semana)
+
+
+@app.get("/api/decomisos")
+def api_listar_decomisos(
+    anio: Optional[int] = None,
+    n_semana: Optional[int] = None,
+    sector: Optional[str] = None,
+):
+    return controldecomisomodelo.listar_decomisos(
+        anio=anio,
+        n_semana=n_semana,
+        sector=sector,
+    )
+
+
+@app.post("/api/decomisos")
+def api_crear_decomiso(datos: dict = Body(...)):
+    try:
+        return controldecomisomodelo.registrar_decomiso(datos)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.put("/api/decomisos/{id_decomiso}")
+def api_editar_decomiso(id_decomiso: int, datos: dict = Body(...)):
+    try:
+        ok = controldecomisomodelo.actualizar_decomiso(id_decomiso, datos)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Registro no encontrado")
+        return {"ok": True}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/api/decomisos/{id_decomiso}")
+def api_eliminar_decomiso(id_decomiso: int):
+    ok = controldecomisomodelo.eliminar_decomiso(id_decomiso)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    return {"ok": True}
