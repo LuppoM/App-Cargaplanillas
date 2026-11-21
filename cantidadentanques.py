@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 from io import BytesIO
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
-
 
 CONFIG_TANQUES = [
     {"tanque": "STK-MOVIL",           "altura": 50,  "capacidad": 650},
