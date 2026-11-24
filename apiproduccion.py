@@ -583,6 +583,9 @@ def login(payload: LoginSchema):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en login: {str(e)}")
+    
+        # --- ENDPOINTS CONTROL DECOMISO ---
+
 
 @app.get("/api/decomisos/opciones")
 def api_decomisos_opciones():

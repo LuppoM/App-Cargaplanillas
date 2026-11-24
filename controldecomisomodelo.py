@@ -34,16 +34,19 @@ def _consultar_sectores_chocolate(cur) -> List[str]:
     """Consulta interna usando cursor activo."""
     cur.execute(
         """
-        SELECT DISTINCT TRIM(nombre_sector)
+        SELECT DISTINCT TRIM(nombre_sector) AS nombre_sector
         FROM public.sectores
         WHERE LOWER(TRIM(COALESCE(planta, ''))) LIKE 'chocolate%'
-          AND UPPER(TRIM(COALESCE(area, ''))) = 'PRODUCCION'
           AND nombre_sector IS NOT NULL
           AND TRIM(nombre_sector) <> ''
         ORDER BY 1
         """
     )
-    sectores = [r[0] for r in cur.fetchall()]
+    sectores = [
+        (r["nombre_sector"] if isinstance(r, dict) else r[0])
+        for r in cur.fetchall()
+        if (r["nombre_sector"] if isinstance(r, dict) else r[0])
+    ]
     if not any(s.lower() == "sin identificacion" for s in sectores):
         sectores.append("Sin identificacion")
     return sectores
