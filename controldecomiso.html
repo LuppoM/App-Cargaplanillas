@@ -6,6 +6,7 @@
     <title>Control de Decomisos - Chocolates</title>
     <link rel="icon" type="image/x-icon" href="/static/icono.ico">
     <link rel="stylesheet" href="/static/controldecomisovista.css">
+    <script src="/static/seguridad.js"></script>
 </head>
 <body>
 
@@ -151,6 +152,15 @@
             window.location.replace('/login');
         }
         const usuarioActual = sesionRaw ? JSON.parse(sesionRaw) : {};
+        const nombreUsuarioHeader = (usuarioActual.usuario || usuarioActual.nombre || '').trim();
+
+        function obtenerHeaders(extra = {}) {
+            const headers = { ...extra };
+            if (nombreUsuarioHeader) {
+                headers['X-Usuario'] = nombreUsuarioHeader;
+            }
+            return headers;
+        }
 
         function obtenerSemanaExcel(fechaStr) {
             const [y, m, d] = fechaStr.split('-').map(Number);
@@ -235,7 +245,11 @@
 
         async function cargarOpciones() {
             try {
-                const res = await fetch('/api/decomisos/opciones', { cache: 'no-store' });
+                const res = await fetch('/api/decomisos/opciones', {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    headers: obtenerHeaders()
+                });
                 if (res.ok) {
                     const data = await res.json();
                     poblarSelectSectores(data.sectores || []);
@@ -249,7 +263,11 @@
             }
 
             try {
-                const resSec = await fetch('/api/decomisos/sectores', { cache: 'no-store' });
+                const resSec = await fetch('/api/decomisos/sectores', {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    headers: obtenerHeaders()
+                });
                 if (resSec.ok) {
                     const dataSec = await resSec.json();
                     poblarSelectSectores(dataSec.sectores || []);
@@ -268,9 +286,14 @@
             document.getElementById('lblSubtituloResumen').innerText = `Año ${anio} · Semana ${semana}`;
 
             try {
+                const opts = {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    headers: obtenerHeaders()
+                };
                 const [resList, resRes] = await Promise.all([
-                    fetch(`/api/decomisos?anio=${encodeURIComponent(anio)}&n_semana=${encodeURIComponent(semana)}&sector=${encodeURIComponent(sector)}`, { cache: 'no-store' }),
-                    fetch(`/api/decomisos/resumen?anio=${encodeURIComponent(anio)}&n_semana=${encodeURIComponent(semana)}`, { cache: 'no-store' })
+                    fetch(`/api/decomisos?anio=${encodeURIComponent(anio)}&n_semana=${encodeURIComponent(semana)}&sector=${encodeURIComponent(sector)}`, opts),
+                    fetch(`/api/decomisos/resumen?anio=${encodeURIComponent(anio)}&n_semana=${encodeURIComponent(semana)}`, opts)
                 ]);
 
                 const registros = resList.ok ? await resList.json() : [];
@@ -360,7 +383,7 @@
                 anio: info.anio,
                 mes: info.mes,
                 planta: 'Chocolate',
-                creado_por: usuarioActual.usuario || usuarioActual.nombre || ''
+                creado_por: nombreUsuarioHeader
             };
 
             const url = editId ? `/api/decomisos/${editId}` : '/api/decomisos';
@@ -368,7 +391,8 @@
 
             const res = await fetch(url, {
                 method,
-                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                headers: obtenerHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payload)
             });
 
@@ -386,10 +410,18 @@
         }
 
         function editarRegistro(reg) {
+            const selSector = document.getElementById('sector');
+            if (reg.sector && !Array.from(selSector.options).some(o => o.value === reg.sector)) {
+                const optExtra = document.createElement('option');
+                optExtra.value = reg.sector;
+                optExtra.textContent = reg.sector;
+                selSector.appendChild(optExtra);
+            }
+
             document.getElementById('editId').value = reg.id;
             document.getElementById('fecha').value = reg.fecha;
             document.getElementById('codigo').value = reg.codigo || '';
-            document.getElementById('sector').value = reg.sector;
+            selSector.value = reg.sector;
             document.getElementById('motivo').value = reg.motivo;
             document.getElementById('peso').value = reg.peso;
             document.getElementById('responsable').value = reg.responsable || '';
@@ -411,7 +443,11 @@
 
         async function eliminarRegistro(id) {
             if (!confirm('¿Eliminar este registro de decomiso?')) return;
-            const res = await fetch(`/api/decomisos/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/decomisos/${id}`, {
+                method: 'DELETE',
+                credentials: 'same-origin',
+                headers: obtenerHeaders()
+            });
             if (res.ok) {
                 await cargarTodo();
             }
