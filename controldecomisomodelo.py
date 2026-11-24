@@ -34,12 +34,12 @@ def _consultar_sectores_chocolate(cur) -> List[str]:
     """Consulta interna usando cursor activo."""
     cur.execute(
         """
-        SELECT DISTINCT TRIM(nombre)
+        SELECT DISTINCT TRIM(nombre_sector)
         FROM public.sectores
-        WHERE activo = TRUE
-          AND LOWER(TRIM(planta)) LIKE 'chocolate%'
-          AND nombre IS NOT NULL
-          AND TRIM(nombre) <> ''
+        WHERE LOWER(TRIM(COALESCE(planta, ''))) LIKE 'chocolate%'
+          AND UPPER(TRIM(COALESCE(area, ''))) = 'PRODUCCION'
+          AND nombre_sector IS NOT NULL
+          AND TRIM(nombre_sector) <> ''
         ORDER BY 1
         """
     )
@@ -50,7 +50,7 @@ def _consultar_sectores_chocolate(cur) -> List[str]:
 
 
 def obtener_sectores_chocolate() -> List[str]:
-    """Trae los sectores activos de planta Chocolate directamente desde public.sectores."""
+    """Trae los sectores de planta Chocolate desde public.sectores."""
     with obtener_conexion() as conn:
         with conn.cursor() as cur:
             return _consultar_sectores_chocolate(cur)
