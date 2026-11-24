@@ -20,9 +20,13 @@ MOTIVOS_SUGERIDOS = [
 
 
 def calcular_datos_fecha(fecha_str: str) -> Dict[str, int]:
-    """Calcula n_semana (estilo WEEKNUM de Excel, domingo inicio), anio y mes."""
+    """
+    Calcula n_semana (domingo inicio):
+    - Si el año empieza en domingo (semana entera), 1 de enero = Semana 1.
+    - Si el año NO empieza en domingo, los primeros días son Semana 0 y la primera semana entera = Semana 1 (se atrasa 1).
+    """
     dt = datetime.strptime(fecha_str[:10], "%Y-%m-%d")
-    n_semana = int(dt.strftime("%U")) + 1
+    n_semana = int(dt.strftime("%U"))
     return {
         "n_semana": n_semana,
         "anio": dt.year,
