@@ -31,24 +31,21 @@ def calcular_datos_fecha(fecha_str: str) -> Dict[str, int]:
 
 
 def _consultar_sectores_chocolate(cur) -> List[str]:
-    """Trae los sectores de public.sectores de planta Chocolate y area PRODUCCION."""
+    """Trae los sectores activos de planta Chocolate desde public.sectores."""
     cur.execute(
         """
-        SELECT DISTINCT TRIM(nombre_sector) AS nombre_sector
+        SELECT DISTINCT TRIM(nombre) AS nombre_sector
         FROM public.sectores
-        WHERE LOWER(TRIM(COALESCE(planta, ''))) = 'chocolate'
-          AND UPPER(TRIM(COALESCE(area, ''))) = 'PRODUCCION'
-          AND nombre_sector IS NOT NULL
-          AND TRIM(nombre_sector) <> ''
+        WHERE LOWER(TRIM(COALESCE(planta, ''))) LIKE %s
+          AND COALESCE(activo, TRUE) = TRUE
+          AND nombre IS NOT NULL
+          AND TRIM(nombre) <> ''
         ORDER BY 1 ASC;
-        """
+        """,
+        ("chocolate%",),
     )
     filas = cur.fetchall()
-    sectores: List[str] = []
-    for fila in filas:
-        nombre = str(fila["nombre_sector"]).strip()
-        if nombre:
-            sectores.append(nombre)
+    sectores = [str(f["nombre_sector"]).strip() for f in filas if f.get("nombre_sector")]
 
     if not any(s.lower() == "sin identificacion" for s in sectores):
         sectores.append("Sin identificacion")
