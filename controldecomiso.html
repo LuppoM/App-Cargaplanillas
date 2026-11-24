@@ -175,43 +175,102 @@
         }
 
         async function cargarOpciones() {
-            const res = await fetch('/api/decomisos/opciones');
-            const data = await res.json();
+    const selSector = document.getElementById('sector');
+    const selFiltro = document.getElementById('filtroSector');
+    if (!selSector || !selFiltro) return;
 
-            const selSector = document.getElementById('sector');
-            const selFiltro = document.getElementById('filtroSector');
-            selSector.innerHTML = '<option value="" disabled selected>Seleccionar sector...</option>';
-            selFiltro.innerHTML = '<option value="TODOS">Todos los sectores</option>';
+    selSector.innerHTML = '<option value="" disabled selected>Seleccionar sector...</option>';
+    selFiltro.innerHTML = '<option value="TODOS">Todos los sectores</option>';
 
-            (data.sectores || []).forEach(sec => {
-                selSector.innerHTML += `<option value="${sec}">${sec}</option>`;
-                selFiltro.innerHTML += `<option value="${sec}">${sec}</option>`;
-            });
+    try {
+        const res = await fetch('/api/decomisos/opciones');
+        if (!res.ok) {
+            console.error('Error HTTP en /api/decomisos/opciones:', res.status);
+            return;
+        }
+        const data = await res.json();
 
-            document.getElementById('listaMotivos').innerHTML = (data.motivos || []).map(m => `<option value="${m}">`).join('');
-            document.getElementById('listaResponsables').innerHTML = (data.responsables || []).map(r => `<option value="${r}">`).join('');
-            document.getElementById('listaCodigos').innerHTML = (data.codigos || []).map(c => `<option value="${c}">`).join('');
+        (data.sectores || []).forEach(sec => {
+            const nombre = String(sec || '').trim();
+            if (!nombre) return;
+
+            const optForm = document.createElement('option');
+            optForm.value = nombre;
+            optForm.textContent = nombre;
+            selSector.appendChild(optForm);
+
+            const optFiltro = document.createElement('option');
+            optFiltro.value = nombre;
+            optFiltro.textContent = nombre;
+            selFiltro.appendChild(optFiltro);
+        });
+
+        const dlMotivos = document.getElementById('listaMotivos');
+        if (dlMotivos) {
+            dlMotivos.innerHTML = (data.motivos || []).map(m => `<option value="${m}">`).join('');
         }
 
-        async function cargarTodo() {
-            const anio = document.getElementById('filtroAnio').value;
-            const semana = document.getElementById('filtroSemana').value;
-            const sector = document.getElementById('filtroSector').value;
-
-            document.getElementById('lblSem1').innerText = semana;
-            document.getElementById('lblSubtituloResumen').innerText = `Año ${anio} · Semana ${semana}`;
-
-            const [resList, resRes] = await Promise.all([
-                fetch(`/api/decomisos?anio=${anio}&n_semana=${semana}&sector=${encodeURIComponent(sector)}`),
-                fetch(`/api/decomisos/resumen?anio=${anio}&n_semana=${semana}`)
-            ]);
-
-            const registros = await resList.json();
-            const resumen = await resRes.json();
-
-            renderizarRegistros(registros);
-            renderizarResumen(resumen);
+        const dlResp = document.getElementById('listaResponsables');
+        if (dlResp) {
+            dlResp.innerHTML = (data.responsables || []).map(r => `<option value="${r}">`).join('');
         }
+
+        const dlCod = document.getElementById('listaCodigos');
+        if (dlCod) {
+            dlCod.innerHTML = (data.codigos || []).map(c => `<option value="${c}">`).join('');
+        }
+    } catch (err) {
+        console.error('Error al cargar opciones de decomisos:', err);
+    }
+}
+
+ async function cargarTodo() {
+    const anio = document.getElementById('filtroAnio').value;
+    const semana = document.getElementById('filtroSemana').value;
+    const sector = document.getElementById('filtroSector').value;
+
+    document.getElementById('lblSem1').innerText = semana;
+    document.getElementById('lblSubtituloResumen').innerText = `Año ${anio} · Semana ${semana}`;
+
+    const [resList, resRes, resOpc] = await Promise.all([
+        fetch(`/api/decomisos?anio=${anio}&n_semana=${semana}&sector=${encodeURIComponent(sector)}`),
+        fetch(`/api/decomisos/resumen?anio=${anio}&n_semana=${semana}`),
+        fetch('/api/decomisos/opciones')
+    ]);
+
+    const registros = await resList.json();
+    const resumen = await resRes.json();
+    const opciones = resOpc.ok ? await resOpc.json() : {};
+
+    if (Array.isArray(opciones.sectores)) {
+        const selSector = document.getElementById('sector');
+        const selFiltro = document.getElementById('filtroSector');
+        const valorFiltroActual = selFiltro.value || 'TODOS';
+
+        selSector.innerHTML = '<option value="" disabled selected>Seleccionar sector...</option>';
+        selFiltro.innerHTML = '<option value="TODOS">Todos los sectores</option>';
+
+        opciones.sectores.forEach((sec) => {
+            const nombre = String(sec ?? '').trim();
+            if (!nombre) return;
+
+            const optForm = document.createElement('option');
+            optForm.value = nombre;
+            optForm.textContent = nombre;
+            selSector.appendChild(optForm);
+
+            const optFiltro = document.createElement('option');
+            optFiltro.value = nombre;
+            optFiltro.textContent = nombre;
+            selFiltro.appendChild(optFiltro);
+        });
+
+        selFiltro.value = valorFiltroActual;
+    }
+
+    renderizarRegistros(registros);
+    renderizarResumen(resumen);
+}
 
         function renderizarRegistros(lista) {
             const tbody = document.getElementById('tbodyRegistros');
