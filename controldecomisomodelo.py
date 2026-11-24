@@ -46,13 +46,72 @@ def _consultar_sectores_chocolate(cur) -> List[str]:
     sectores: List[str] = []
     for r in filas:
         val = r["nombre_sector"] if isinstance(r, dict) else r[0]
-        if val and str(val).strip():
+        if val is not None and str(val).strip():
             sectores.append(str(val).strip())
 
     if not any(s.lower() == "sin identificacion" for s in sectores):
         sectores.append("Sin identificacion")
     return sectores
 
+
+def obtener_sectores_chocolate() -> List[str]:
+    """Trae los sectores de producción desde public.sectores."""
+    with obtener_conexion() as conn:
+        with conn.cursor() as cur:
+            return _consultar_sectores_chocolate(cur)
+
+
+def obtener_opciones_formulario() -> Dict[str, List[str]]:
+    """Devuelve sectores de producción, motivos, responsables y códigos para el formulario."""
+    sectores: List[str] = ["Sin identificacion"]
+    motivos_bd: List[str] = []
+    responsables_bd: List[str] = []
+    codigos_bd: List[str] = []
+
+    with obtener_conexion() as conn:
+        with conn.cursor() as cur:
+            sectores = _consultar_sectores_chocolate(cur)
+
+            try:
+                cur.execute(
+                    "SELECT DISTINCT TRIM(motivo) AS motivo FROM public.decomisos WHERE motivo IS NOT NULL AND TRIM(motivo) <> '' ORDER BY 1"
+                )
+                motivos_bd = [
+                    str(r["motivo"] if isinstance(r, dict) else r[0]).strip()
+                    for r in cur.fetchall()
+                ]
+            except Exception:
+                conn.rollback()
+
+            try:
+                cur.execute(
+                    "SELECT DISTINCT TRIM(responsable) AS responsable FROM public.decomisos WHERE responsable IS NOT NULL AND TRIM(responsable) <> '' ORDER BY 1"
+                )
+                responsables_bd = [
+                    str(r["responsable"] if isinstance(r, dict) else r[0]).strip()
+                    for r in cur.fetchall()
+                ]
+            except Exception:
+                conn.rollback()
+
+            try:
+                cur.execute(
+                    "SELECT DISTINCT TRIM(codigo) AS codigo FROM public.decomisos WHERE codigo IS NOT NULL AND TRIM(codigo) <> '' ORDER BY 1 LIMIT 200"
+                )
+                codigos_bd = [
+                    str(r["codigo"] if isinstance(r, dict) else r[0]).strip()
+                    for r in cur.fetchall()
+                ]
+            except Exception:
+                conn.rollback()
+
+    motivos = list(dict.fromkeys(MOTIVOS_SUGERIDOS + [m for m in motivos_bd if m]))
+    return {
+        "sectores": sectores,
+        "motivos": motivos,
+        "responsables": [r for r in responsables_bd if r],
+        "codigos": [c for c in codigos_bd if c],
+    }
 
 def listar_decomisos(
     anio: Optional[int] = None,
@@ -210,28 +269,6 @@ def eliminar_decomiso(id_decomiso: int) -> bool:
             raise
 
 
-def obtener_opciones_formulario() -> Dict[str, List[str]]:
-    """Devuelve sectores activos de planta Chocolate, motivos y responsables para autocompletar."""
-    with obtener_conexion() as conn:
-        with conn.cursor() as cur:
-            sectores = _consultar_sectores_chocolate(cur)
-
-            cur.execute("SELECT DISTINCT TRIM(motivo) FROM public.decomisos WHERE motivo IS NOT NULL AND TRIM(motivo) <> '' ORDER BY 1")
-            motivos_bd = [r[0] for r in cur.fetchall()]
-
-            cur.execute("SELECT DISTINCT TRIM(responsable) FROM public.decomisos WHERE responsable IS NOT NULL AND TRIM(responsable) <> '' ORDER BY 1")
-            responsables_bd = [r[0] for r in cur.fetchall()]
-
-            cur.execute("SELECT DISTINCT TRIM(codigo) FROM public.decomisos WHERE codigo IS NOT NULL AND TRIM(codigo) <> '' ORDER BY 1 LIMIT 200")
-            codigos_bd = [r[0] for r in cur.fetchall()]
-
-        motivos = list(dict.fromkeys(MOTIVOS_SUGERIDOS + motivos_bd))
-        return {
-            "sectores": sectores,
-            "motivos": motivos,
-            "responsables": responsables_bd,
-            "codigos": codigos_bd,
-        }
 
 
 def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
