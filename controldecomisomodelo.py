@@ -427,6 +427,9 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
     for sec in sectores_choco:
         elab = round(kg_elaborados_map[sec], 2)
         deco = round(kg_decomiso_map[sec], 2)
+        if deco <= 0:
+            continue
+
         if sec.lower() == "sin identificacion":
             pct = round((deco / total_elaborados) * 100, 2) if total_elaborados > 0 else None
         else:
