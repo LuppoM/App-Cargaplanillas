@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from psycopg2.extras import RealDictCursor
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from conexion import obtener_conexion
@@ -29,19 +29,19 @@ def calcular_datos_fecha(fecha_str: str) -> Dict[str, int]:
         "mes": dt.month,
     }
 
-
 def _consultar_sectores_chocolate(cur) -> List[str]:
     """Trae todos los nombre_sector de public.sectores donde planta='Chocolate' y area='PRODUCCION'."""
     cur.execute(
         """
         SELECT DISTINCT TRIM(nombre_sector) AS nombre_sector
         FROM public.sectores
-        WHERE planta = 'Chocolate'
-          AND area = 'PRODUCCION'
+        WHERE planta = %s
+          AND area = %s
           AND nombre_sector IS NOT NULL
           AND TRIM(nombre_sector) <> ''
-        ORDER BY 1
-        """
+        ORDER BY 1;
+        """,
+        ("Chocolate", "PRODUCCION"),
     )
     filas = cur.fetchall()
     sectores: List[str] = []
@@ -53,6 +53,32 @@ def _consultar_sectores_chocolate(cur) -> List[str]:
     if not any(s.lower() == "sin identificacion" for s in sectores):
         sectores.append("Sin identificacion")
     return sectores
+
+def obtener_sectores_chocolate_produccion():
+    """Devuelve lista de dicts con id y nombre_sector de Chocolate y PRODUCCION."""
+    sql = """
+        SELECT id, TRIM(nombre_sector) AS nombre_sector
+        FROM public.sectores
+        WHERE planta = %s
+          AND area = %s
+          AND nombre_sector IS NOT NULL
+          AND TRIM(nombre_sector) <> ''
+        ORDER BY nombre_sector ASC;
+    """
+    with obtener_conexion() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(sql, ("Chocolate", "PRODUCCION"))
+            filas = cur.fetchall()
+
+    sectores = [
+        {"id": fila["id"], "nombre_sector": fila["nombre_sector"]}
+        for fila in filas
+        if fila.get("nombre_sector")
+    ]
+    if not any(s["nombre_sector"].lower() == "sin identificacion" for s in sectores):
+        sectores.append({"id": None, "nombre_sector": "Sin identificacion"})
+    return sectores
+
 
 def obtener_sectores_chocolate() -> List[str]:
     """Trae los sectores de producción desde public.sectores."""
