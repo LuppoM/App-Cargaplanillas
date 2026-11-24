@@ -587,6 +587,11 @@ def login(payload: LoginSchema):
         # --- ENDPOINTS CONTROL DECOMISO ---
 
 
+@app.get("/api/decomisos/sectores")
+def api_decomisos_sectores():
+    return {"sectores": controldecomisomodelo.obtener_sectores_chocolate()}
+
+
 @app.get("/api/decomisos/opciones")
 def api_decomisos_opciones():
     return controldecomisomodelo.obtener_opciones_formulario()
@@ -635,28 +640,3 @@ def api_eliminar_decomiso(id_decomiso: int):
     if not ok:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
     return {"ok": True}
-@app.get("/api/decomisos/sectores")
-def api_decomisos_sectores():
-    try:
-        sectores = controldecomisomodelo.obtener_sectores_chocolate()
-    except Exception:
-        with controldecomisomodelo.obtener_conexion() as conn:
-            with conn.cursor() as cur:
-                sectores = controldecomisomodelo._consultar_sectores_chocolate(cur)
-    return {"sectores": sectores}
-
-
-@app.get("/api/decomisos/opciones")
-def api_decomisos_opciones():
-    try:
-        data = controldecomisomodelo.obtener_opciones_formulario()
-        if not data.get("sectores"):
-            data["sectores"] = api_decomisos_sectores()["sectores"]
-        return data
-    except Exception:
-        return {
-            "sectores": api_decomisos_sectores()["sectores"],
-            "motivos": [],
-            "responsables": [],
-            "codigos": [],
-        }

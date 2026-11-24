@@ -53,7 +53,7 @@
     </div>
 
     <div class="main-grid">
-        <!-- COLUMNA IZQUIERDA: CARGA Y REGISTROS (TABLA DECOMISOS) -->
+        <!-- COLUMNA IZQUIERDA: CARGA Y REGISTROS -->
         <div class="panel">
             <h2>
                 <span id="tituloForm">Registro Diario de Decomiso</span>
@@ -120,7 +120,7 @@
             </div>
         </div>
 
-        <!-- COLUMNA DERECHA: RESUMEN POR SECTOR (INFORME SEMANAL) -->
+        <!-- COLUMNA DERECHA: CONSOLIDADO SEMANAL POR SECTOR -->
         <div class="panel">
             <h2>
                 <span>Consolidado Semanal por Sector</span>
@@ -156,7 +156,7 @@
             const [y, m, d] = fechaStr.split('-').map(Number);
             const fecha = new Date(y, m - 1, d);
             const inicioAnio = new Date(y, 0, 1);
-            const diaSemanaInicio = inicioAnio.getDay(); // 0 = Domingo
+            const diaSemanaInicio = inicioAnio.getDay();
             const diasTranscurridos = Math.floor((fecha - inicioAnio) / 86400000);
             const nSemana = Math.floor((diasTranscurridos + diaSemanaInicio) / 7) + 1;
             return { anio: y, mes: m, n_semana: nSemana };
@@ -216,14 +216,8 @@
                 selFiltro.appendChild(optFiltro);
             });
 
-            if (valorSectorPrevio && listaUnica.includes(valorSectorPrevio)) {
-                selSector.value = valorSectorPrevio;
-            } else {
-                selSector.value = '';
-            }
-
-            const opcionesFiltroValidas = ['TODOS', ...listaUnica];
-            selFiltro.value = opcionesFiltroValidas.includes(valorFiltroPrevio) ? valorFiltroPrevio : 'TODOS';
+            selSector.value = (valorSectorPrevio && listaUnica.includes(valorSectorPrevio)) ? valorSectorPrevio : '';
+            selFiltro.value = (['TODOS', ...listaUnica].includes(valorFiltroPrevio)) ? valorFiltroPrevio : 'TODOS';
         }
 
         function poblarDatalist(idElemento, valores) {
@@ -241,20 +235,27 @@
 
         async function cargarOpciones() {
             try {
-                const res = await fetch('/api/decomisos/opciones');
-                if (!res.ok) {
-                    console.error('Error HTTP al cargar /api/decomisos/opciones:', res.status);
-                    poblarSelectSectores(['Sin identificacion']);
+                const res = await fetch('/api/decomisos/opciones', { cache: 'no-store' });
+                if (res.ok) {
+                    const data = await res.json();
+                    poblarSelectSectores(data.sectores || []);
+                    poblarDatalist('listaMotivos', data.motivos);
+                    poblarDatalist('listaResponsables', data.responsables);
+                    poblarDatalist('listaCodigos', data.codigos);
                     return;
                 }
-                const data = await res.json();
-                poblarSelectSectores(data.sectores);
-                poblarDatalist('listaMotivos', data.motivos);
-                poblarDatalist('listaResponsables', data.responsables);
-                poblarDatalist('listaCodigos', data.codigos);
             } catch (err) {
-                console.error('Error de red al cargar opciones de decomisos:', err);
-                poblarSelectSectores(['Sin identificacion']);
+                console.error('Error al cargar /api/decomisos/opciones:', err);
+            }
+
+            try {
+                const resSec = await fetch('/api/decomisos/sectores', { cache: 'no-store' });
+                if (resSec.ok) {
+                    const dataSec = await resSec.json();
+                    poblarSelectSectores(dataSec.sectores || []);
+                }
+            } catch (err) {
+                console.error('Error al cargar /api/decomisos/sectores:', err);
             }
         }
 
@@ -268,8 +269,8 @@
 
             try {
                 const [resList, resRes] = await Promise.all([
-                    fetch(`/api/decomisos?anio=${encodeURIComponent(anio)}&n_semana=${encodeURIComponent(semana)}&sector=${encodeURIComponent(sector)}`),
-                    fetch(`/api/decomisos/resumen?anio=${encodeURIComponent(anio)}&n_semana=${encodeURIComponent(semana)}`)
+                    fetch(`/api/decomisos?anio=${encodeURIComponent(anio)}&n_semana=${encodeURIComponent(semana)}&sector=${encodeURIComponent(sector)}`, { cache: 'no-store' }),
+                    fetch(`/api/decomisos/resumen?anio=${encodeURIComponent(anio)}&n_semana=${encodeURIComponent(semana)}`, { cache: 'no-store' })
                 ]);
 
                 const registros = resList.ok ? await resList.json() : [];
