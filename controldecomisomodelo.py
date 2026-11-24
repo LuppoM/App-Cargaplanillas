@@ -31,13 +31,14 @@ def calcular_datos_fecha(fecha_str: str) -> Dict[str, int]:
 
 
 def _consultar_sectores_chocolate(cur) -> List[str]:
-    """Trae todos los nombre_sector de public.sectores que pertenezcan a producción."""
+    """Trae todos los nombre_sector de public.sectores de planta Chocolate y area PRODUCCION."""
     cur.execute(
         """
         SELECT DISTINCT TRIM(nombre_sector) AS nombre_sector
         FROM public.sectores
         WHERE nombre_sector IS NOT NULL
           AND TRIM(nombre_sector) <> ''
+          AND TRANSLATE(UPPER(TRIM(COALESCE(planta, ''))), 'ÁÉÍÓÚ', 'AEIOU') LIKE '%CHOCOLATE%'
           AND TRANSLATE(UPPER(TRIM(COALESCE(area, ''))), 'ÁÉÍÓÚ', 'AEIOU') LIKE '%PRODUCCION%'
         ORDER BY 1
         """
@@ -52,7 +53,6 @@ def _consultar_sectores_chocolate(cur) -> List[str]:
     if not any(s.lower() == "sin identificacion" for s in sectores):
         sectores.append("Sin identificacion")
     return sectores
-
 
 def obtener_sectores_chocolate() -> List[str]:
     """Trae los sectores de producción desde public.sectores."""
