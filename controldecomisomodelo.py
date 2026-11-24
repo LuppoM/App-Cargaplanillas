@@ -31,32 +31,27 @@ def calcular_datos_fecha(fecha_str: str) -> Dict[str, int]:
 
 
 def _consultar_sectores_chocolate(cur) -> List[str]:
-    """Consulta interna usando cursor activo."""
+    """Trae todos los nombre_sector de public.sectores que pertenezcan a producción."""
     cur.execute(
         """
         SELECT DISTINCT TRIM(nombre_sector) AS nombre_sector
         FROM public.sectores
-        WHERE LOWER(TRIM(COALESCE(planta, ''))) LIKE 'Chocolate%'
-          AND TRANSLATE(UPPER(TRIM(COALESCE(area, ''))), 'ÁÉÍÓÚ', 'AEIOU') = 'PRODUCCION'
-          AND nombre_sector IS NOT NULL
+        WHERE nombre_sector IS NOT NULL
           AND TRIM(nombre_sector) <> ''
+          AND TRANSLATE(UPPER(TRIM(COALESCE(area, ''))), 'ÁÉÍÓÚ', 'AEIOU') LIKE '%PRODUCCION%'
         ORDER BY 1
         """
     )
-    sectores = [
-        (r["nombre_sector"] if isinstance(r, dict) else r[0])
-        for r in cur.fetchall()
-        if (r["nombre_sector"] if isinstance(r, dict) else r[0])
-    ]
+    filas = cur.fetchall()
+    sectores: List[str] = []
+    for r in filas:
+        val = r["nombre_sector"] if isinstance(r, dict) else r[0]
+        if val and str(val).strip():
+            sectores.append(str(val).strip())
+
     if not any(s.lower() == "sin identificacion" for s in sectores):
         sectores.append("Sin identificacion")
     return sectores
-
-def obtener_sectores_chocolate() -> List[str]:
-    """Trae los sectores de planta Chocolate desde public.sectores."""
-    with obtener_conexion() as conn:
-        with conn.cursor() as cur:
-            return _consultar_sectores_chocolate(cur)
 
 
 def listar_decomisos(
