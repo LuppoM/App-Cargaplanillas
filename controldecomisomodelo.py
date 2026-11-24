@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import unicodedata
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -17,6 +18,22 @@ MOTIVOS_SUGERIDOS = [
     "Viruta deco",
     "Bañadora",
 ]
+
+# Equivalente exacto en PostgreSQL a int(dt.strftime("%U")) de Python:
+# Domingo = inicio de semana. Si el año empieza en domingo -> Semana 1; si no, se atrasa 1.
+EXPR_SEMANA_SQL = (
+    "((EXTRACT(DOY FROM fecha)::int - 1 "
+    "- EXTRACT(DOW FROM fecha)::int + 7) / 7)"
+)
+
+
+def _normalizar_texto(texto: str) -> str:
+    txt = str(texto or "").strip().lower()
+    txt = "".join(
+        c for c in unicodedata.normalize("NFD", txt)
+        if unicodedata.category(c) != "Mn"
+    )
+    return " ".join(txt.split())
 
 
 def calcular_datos_fecha(fecha_str: str) -> Dict[str, int]:
@@ -156,11 +173,11 @@ def listar_decomisos(
                     condiciones.append("EXTRACT(YEAR FROM fecha)::int = %s")
                 params.append(anio)
 
-            if n_semana:
+            if n_semana is not None:
                 if "n_semana" in cols_deco:
                     condiciones.append("n_semana = %s")
                 else:
-                    condiciones.append("(EXTRACT(DOY FROM fecha)::int - 1 + EXTRACT(DOW FROM DATE_TRUNC('year', fecha))::int) / 7 + 1 = %s")
+                    condiciones.append(f"{EXPR_SEMANA_SQL} = %s")
                 params.append(n_semana)
 
             if sector and sector.strip().upper() != "TODOS" and "sector" in cols_deco:
@@ -228,7 +245,7 @@ def registrar_decomiso(datos: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError("La fecha es obligatoria.")
 
     info_fecha = calcular_datos_fecha(fecha)
-    n_semana = int(datos.get("n_semana") or info_fecha["n_semana"])
+    n_semana = int(datos.get("n_semana") if datos.get("n_semana") is not None else info_fecha["n_semana"])
     anio = int(datos.get("anio") or info_fecha["anio"])
     mes = int(datos.get("mes") or info_fecha["mes"])
 
@@ -288,7 +305,7 @@ def actualizar_decomiso(id_decomiso: int, datos: Dict[str, Any]) -> bool:
         raise ValueError("La fecha es obligatoria.")
 
     info_fecha = calcular_datos_fecha(fecha)
-    n_semana = int(datos.get("n_semana") or info_fecha["n_semana"])
+    n_semana = int(datos.get("n_semana") if datos.get("n_semana") is not None else info_fecha["n_semana"])
     anio = int(datos.get("anio") or info_fecha["anio"])
     mes = int(datos.get("mes") or info_fecha["mes"])
 
@@ -349,15 +366,6 @@ def eliminar_decomiso(id_decomiso: int) -> bool:
             raise
 
 
-def _normalizar_texto(texto: str) -> str:
-    txt = str(texto or "").strip().lower()
-    txt = "".join(
-        c for c in unicodedata.normalize("NFD", txt)
-        if unicodedata.category(c) != "Mn"
-    )
-    return " ".join(txt.split())
-
-
 def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
     """
     Cruza Kg elaborados (public.planillas) vs Kg decomiso (public.decomisos)
@@ -372,18 +380,6 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
             kg_elaborados_map: Dict[str, float] = {s: 0.0 for s in sectores_choco}
             kg_decomiso_map: Dict[str, float] = {s: 0.0 for s in sectores_choco}
 
-            # Misma fórmula exacta que int(dt.strftime("%U")) + 1 en Python (domingo = inicio de semana)
-            expr_semana_pg = (
-                "(EXTRACT(DOY FROM fecha)::int - 1 "
-                "+ EXTRACT(DOW FROM DATE_TRUNC('year', fecha))::int) / 7 + 1"
-            )
-            # En strftime("%U"), los días previos al primer domingo del año son semana 0 (+1 = 1),
-            # y cada domingo suma 1:
-            expr_semana_python = (
-                "((EXTRACT(DOY FROM fecha)::int - 1 "
-                "- EXTRACT(DOW FROM fecha)::int + 7) / 7) + 1"
-            )
-
             # 1. Kg elaborados desde public.planillas
             cur.execute(
                 f"""
@@ -391,7 +387,7 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
                        COALESCE(SUM(kg_cajas_reales), 0) AS total_kg
                 FROM public.planillas
                 WHERE EXTRACT(YEAR FROM fecha)::int = %s
-                  AND {expr_semana_python} = %s
+                  AND {EXPR_SEMANA_SQL} = %s
                   AND LOWER(TRIM(COALESCE(planta, ''))) LIKE %s
                 GROUP BY TRIM(centro_trabajo);
                 """,
@@ -406,7 +402,6 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
                 elif key.startswith("boiler") and "boiler" in mapa_oficial:
                     kg_elaborados_map[mapa_oficial["boiler"]] += kg_f
                 else:
-                    # Coincidencia parcial por si en sectores dice ej. "Moldeo" y en planillas "Moldeo Pascua"
                     destino = next(
                         (oficial for norm, oficial in mapa_oficial.items()
                          if norm and norm != "sin identificacion" and (norm in key or key in norm)),
@@ -432,7 +427,7 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
                 if "n_semana" in cols_deco:
                     cond_deco.append("n_semana = %s")
                 else:
-                    cond_deco.append(f"{expr_semana_python} = %s")
+                    cond_deco.append(f"{EXPR_SEMANA_SQL} = %s")
                 params_deco.append(n_semana)
 
                 if "planta" in cols_deco:
