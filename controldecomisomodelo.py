@@ -30,6 +30,19 @@ def calcular_datos_fecha(fecha_str: str) -> Dict[str, int]:
     }
 
 
+def _columnas_tabla(cur, tabla: str) -> set[str]:
+    """Devuelve en minúsculas los nombres de columnas reales de una tabla en public."""
+    cur.execute(
+        """
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = %s;
+        """,
+        (tabla,),
+    )
+    return {r["column_name"].lower() for r in cur.fetchall()}
+
+
 def _consultar_sectores_chocolate(cur) -> List[str]:
     """Trae los sectores activos de planta Chocolate desde public.sectores."""
     cur.execute(
@@ -64,37 +77,45 @@ def obtener_opciones_formulario() -> Dict[str, List[str]]:
     with obtener_conexion() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             sectores = _consultar_sectores_chocolate(cur)
+            cols_deco = _columnas_tabla(cur, "decomisos")
 
-            cur.execute(
-                """
-                SELECT DISTINCT TRIM(motivo) AS motivo
-                FROM public.decomisos
-                WHERE motivo IS NOT NULL AND TRIM(motivo) <> ''
-                ORDER BY 1 ASC;
-                """
-            )
-            motivos_bd = [str(r["motivo"]).strip() for r in cur.fetchall() if r.get("motivo")]
+            motivos_bd: List[str] = []
+            responsables_bd: List[str] = []
+            codigos_bd: List[str] = []
 
-            cur.execute(
-                """
-                SELECT DISTINCT TRIM(responsable) AS responsable
-                FROM public.decomisos
-                WHERE responsable IS NOT NULL AND TRIM(responsable) <> ''
-                ORDER BY 1 ASC;
-                """
-            )
-            responsables_bd = [str(r["responsable"]).strip() for r in cur.fetchall() if r.get("responsable")]
+            if "motivo" in cols_deco:
+                cur.execute(
+                    """
+                    SELECT DISTINCT TRIM(motivo::text) AS motivo
+                    FROM public.decomisos
+                    WHERE motivo IS NOT NULL AND TRIM(motivo::text) <> ''
+                    ORDER BY 1 ASC;
+                    """
+                )
+                motivos_bd = [str(r["motivo"]).strip() for r in cur.fetchall() if r.get("motivo")]
 
-            cur.execute(
-                """
-                SELECT DISTINCT TRIM(codigo) AS codigo
-                FROM public.decomisos
-                WHERE codigo IS NOT NULL AND TRIM(codigo) <> ''
-                ORDER BY 1 ASC
-                LIMIT 200;
-                """
-            )
-            codigos_bd = [str(r["codigo"]).strip() for r in cur.fetchall() if r.get("codigo")]
+            if "responsable" in cols_deco:
+                cur.execute(
+                    """
+                    SELECT DISTINCT TRIM(responsable::text) AS responsable
+                    FROM public.decomisos
+                    WHERE responsable IS NOT NULL AND TRIM(responsable::text) <> ''
+                    ORDER BY 1 ASC;
+                    """
+                )
+                responsables_bd = [str(r["responsable"]).strip() for r in cur.fetchall() if r.get("responsable")]
+
+            if "codigo" in cols_deco:
+                cur.execute(
+                    """
+                    SELECT DISTINCT TRIM(codigo::text) AS codigo
+                    FROM public.decomisos
+                    WHERE codigo IS NOT NULL AND TRIM(codigo::text) <> ''
+                    ORDER BY 1 ASC
+                    LIMIT 200;
+                    """
+                )
+                codigos_bd = [str(r["codigo"]).strip() for r in cur.fetchall() if r.get("codigo")]
 
     motivos = list(dict.fromkeys(MOTIVOS_SUGERIDOS + motivos_bd))
     return {
@@ -113,36 +134,63 @@ def listar_decomisos(
 ) -> List[Dict[str, Any]]:
     with obtener_conexion() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            condiciones = ["LOWER(TRIM(COALESCE(planta, 'Chocolate'))) LIKE 'chocolate%'"]
+            cols_deco = _columnas_tabla(cur, "decomisos")
+            if not cols_deco:
+                return []
+
+            condiciones: List[str] = []
             params: List[Any] = []
 
+            if "planta" in cols_deco:
+                condiciones.append("LOWER(TRIM(COALESCE(planta::text, 'Chocolate'))) LIKE %s")
+                params.append("chocolate%")
+
             if anio:
-                condiciones.append("anio = %s")
+                if "anio" in cols_deco:
+                    condiciones.append("anio = %s")
+                else:
+                    condiciones.append("EXTRACT(YEAR FROM fecha)::int = %s")
                 params.append(anio)
+
             if n_semana:
-                condiciones.append("n_semana = %s")
+                if "n_semana" in cols_deco:
+                    condiciones.append("n_semana = %s")
+                else:
+                    condiciones.append("(EXTRACT(DOY FROM fecha)::int - 1 + EXTRACT(DOW FROM DATE_TRUNC('year', fecha))::int) / 7 + 1 = %s")
                 params.append(n_semana)
-            if sector and sector.strip().upper() != "TODOS":
-                condiciones.append("LOWER(TRIM(sector)) = LOWER(TRIM(%s))")
+
+            if sector and sector.strip().upper() != "TODOS" and "sector" in cols_deco:
+                condiciones.append("LOWER(TRIM(sector::text)) = LOWER(TRIM(%s))")
                 params.append(sector.strip())
 
-            where_sql = f"WHERE {' AND '.join(condiciones)}"
+            where_sql = f"WHERE {' AND '.join(condiciones)}" if condiciones else ""
             params.append(limite)
+
+            sel_codigo = "COALESCE(codigo::text, '') AS codigo" if "codigo" in cols_deco else "'' AS codigo"
+            sel_motivo = "COALESCE(motivo::text, '') AS motivo" if "motivo" in cols_deco else "'' AS motivo"
+            sel_sector = "COALESCE(sector::text, '') AS sector" if "sector" in cols_deco else "'' AS sector"
+            sel_peso = "COALESCE(peso, 0) AS peso" if "peso" in cols_deco else "0 AS peso"
+            sel_resp = "COALESCE(responsable::text, '') AS responsable" if "responsable" in cols_deco else "'' AS responsable"
+            sel_sem = "n_semana" if "n_semana" in cols_deco else "NULL AS n_semana"
+            sel_anio = "anio" if "anio" in cols_deco else "EXTRACT(YEAR FROM fecha)::int AS anio"
+            sel_mes = "mes" if "mes" in cols_deco else "EXTRACT(MONTH FROM fecha)::int AS mes"
+            sel_planta = "COALESCE(planta::text, 'Chocolate') AS planta" if "planta" in cols_deco else "'Chocolate' AS planta"
+            sel_creado = "COALESCE(creado_por::text, '') AS creado_por" if "creado_por" in cols_deco else "'' AS creado_por"
 
             cur.execute(
                 f"""
                 SELECT id,
                        TO_CHAR(fecha, 'YYYY-MM-DD') AS fecha,
-                       COALESCE(codigo, '') AS codigo,
-                       COALESCE(motivo, '') AS motivo,
-                       COALESCE(sector, '') AS sector,
-                       COALESCE(peso, 0) AS peso,
-                       COALESCE(responsable, '') AS responsable,
-                       n_semana,
-                       anio,
-                       mes,
-                       COALESCE(planta, 'Chocolate') AS planta,
-                       COALESCE(creado_por, '') AS creado_por
+                       {sel_codigo},
+                       {sel_motivo},
+                       {sel_sector},
+                       {sel_peso},
+                       {sel_resp},
+                       {sel_sem},
+                       {sel_anio},
+                       {sel_mes},
+                       {sel_planta},
+                       {sel_creado}
                 FROM public.decomisos
                 {where_sql}
                 ORDER BY fecha DESC, id DESC
@@ -196,14 +244,31 @@ def registrar_decomiso(datos: Dict[str, Any]) -> Dict[str, Any]:
     with obtener_conexion() as conn:
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cols_deco = _columnas_tabla(cur, "decomisos")
+                candidatos = [
+                    ("fecha", fecha),
+                    ("codigo", codigo),
+                    ("motivo", motivo),
+                    ("sector", sector),
+                    ("peso", peso),
+                    ("responsable", responsable),
+                    ("n_semana", n_semana),
+                    ("anio", anio),
+                    ("mes", mes),
+                    ("planta", planta),
+                    ("creado_por", creado_por),
+                ]
+                columnas_insert = [col for col, _ in candidatos if col in cols_deco]
+                valores_insert = [val for col, val in candidatos if col in cols_deco]
+                placeholders = ", ".join(["%s"] * len(columnas_insert))
+
                 cur.execute(
-                    """
-                    INSERT INTO public.decomisos
-                        (fecha, codigo, motivo, sector, peso, responsable, n_semana, anio, mes, planta, creado_por)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    f"""
+                    INSERT INTO public.decomisos ({', '.join(columnas_insert)})
+                    VALUES ({placeholders})
                     RETURNING id;
                     """,
-                    (fecha, codigo, motivo, sector, peso, responsable, n_semana, anio, mes, planta, creado_por),
+                    tuple(valores_insert),
                 )
                 nuevo_id = cur.fetchone()["id"]
             conn.commit()
@@ -235,32 +300,29 @@ def actualizar_decomiso(id_decomiso: int, datos: Dict[str, Any]) -> bool:
     with obtener_conexion() as conn:
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cols_deco = _columnas_tabla(cur, "decomisos")
+                candidatos = [
+                    ("fecha", fecha),
+                    ("codigo", str(datos.get("codigo") or "").strip()),
+                    ("motivo", motivo),
+                    ("sector", sector),
+                    ("peso", peso),
+                    ("responsable", str(datos.get("responsable") or "").strip()),
+                    ("n_semana", n_semana),
+                    ("anio", anio),
+                    ("mes", mes),
+                ]
+                sets = [f"{col} = %s" for col, _ in candidatos if col in cols_deco]
+                valores = [val for col, val in candidatos if col in cols_deco]
+                valores.append(id_decomiso)
+
                 cur.execute(
-                    """
+                    f"""
                     UPDATE public.decomisos
-                    SET fecha = %s,
-                        codigo = %s,
-                        motivo = %s,
-                        sector = %s,
-                        peso = %s,
-                        responsable = %s,
-                        n_semana = %s,
-                        anio = %s,
-                        mes = %s
+                    SET {', '.join(sets)}
                     WHERE id = %s;
                     """,
-                    (
-                        fecha,
-                        str(datos.get("codigo") or "").strip(),
-                        motivo,
-                        sector,
-                        peso,
-                        str(datos.get("responsable") or "").strip(),
-                        n_semana,
-                        anio,
-                        mes,
-                        id_decomiso,
-                    ),
+                    tuple(valores),
                 )
                 actualizado = cur.rowcount > 0
             conn.commit()
@@ -286,12 +348,13 @@ def eliminar_decomiso(id_decomiso: int) -> bool:
 def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
     """
     Cruza Kg elaborados (public.planillas) vs Kg decomiso (public.decomisos)
-    para los sectores de Chocolate / PRODUCCION en public.sectores.
+    para los sectores de Chocolate en public.sectores.
     """
     with obtener_conexion() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             sectores_choco = _consultar_sectores_chocolate(cur)
             mapa_oficial = {s.lower(): s for s in sectores_choco}
+            cols_deco = _columnas_tabla(cur, "decomisos")
 
             kg_elaborados_map: Dict[str, float] = {s: 0.0 for s in sectores_choco}
             kg_decomiso_map: Dict[str, float] = {s: 0.0 for s in sectores_choco}
@@ -304,10 +367,10 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
                 FROM public.planillas
                 WHERE EXTRACT(YEAR FROM fecha)::int = %s
                   AND (EXTRACT(DOY FROM fecha)::int - 1 + EXTRACT(DOW FROM DATE_TRUNC('year', fecha))::int) / 7 + 1 = %s
-                  AND LOWER(TRIM(COALESCE(planta, ''))) LIKE 'chocolate%'
+                  AND LOWER(TRIM(COALESCE(planta, ''))) LIKE %s
                 GROUP BY TRIM(centro_trabajo);
                 """,
-                (anio, n_semana),
+                (anio, n_semana, "chocolate%"),
             )
             for row in cur.fetchall():
                 kg_f = float(row["total_kg"] or 0)
@@ -318,26 +381,44 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
                     kg_elaborados_map[mapa_oficial["boiler"]] += kg_f
 
             # 2. Kg decomiso desde public.decomisos
-            cur.execute(
-                """
-                SELECT TRIM(sector) AS sector,
-                       COALESCE(SUM(peso), 0) AS total_peso
-                FROM public.decomisos
-                WHERE anio = %s
-                  AND n_semana = %s
-                  AND LOWER(TRIM(COALESCE(planta, 'Chocolate'))) LIKE 'chocolate%'
-                GROUP BY TRIM(sector);
-                """,
-                (anio, n_semana),
-            )
-            for row in cur.fetchall():
-                peso_f = float(row["total_peso"] or 0)
-                key = str(row["sector"] or "").strip().lower()
-                if key in mapa_oficial:
-                    kg_decomiso_map[mapa_oficial[key]] += peso_f
+            if cols_deco and "sector" in cols_deco and "peso" in cols_deco:
+                cond_deco = []
+                params_deco: List[Any] = []
+
+                if "anio" in cols_deco:
+                    cond_deco.append("anio = %s")
                 else:
-                    sin_id = mapa_oficial.get("sin identificacion", "Sin identificacion")
-                    kg_decomiso_map[sin_id] += peso_f
+                    cond_deco.append("EXTRACT(YEAR FROM fecha)::int = %s")
+                params_deco.append(anio)
+
+                if "n_semana" in cols_deco:
+                    cond_deco.append("n_semana = %s")
+                else:
+                    cond_deco.append("(EXTRACT(DOY FROM fecha)::int - 1 + EXTRACT(DOW FROM DATE_TRUNC('year', fecha))::int) / 7 + 1 = %s")
+                params_deco.append(n_semana)
+
+                if "planta" in cols_deco:
+                    cond_deco.append("LOWER(TRIM(COALESCE(planta::text, 'Chocolate'))) LIKE %s")
+                    params_deco.append("chocolate%")
+
+                cur.execute(
+                    f"""
+                    SELECT TRIM(sector::text) AS sector,
+                           COALESCE(SUM(peso), 0) AS total_peso
+                    FROM public.decomisos
+                    WHERE {' AND '.join(cond_deco)}
+                    GROUP BY TRIM(sector::text);
+                    """,
+                    tuple(params_deco),
+                )
+                for row in cur.fetchall():
+                    peso_f = float(row["total_peso"] or 0)
+                    key = str(row["sector"] or "").strip().lower()
+                    if key in mapa_oficial:
+                        kg_decomiso_map[mapa_oficial[key]] += peso_f
+                    else:
+                        sin_id = mapa_oficial.get("sin identificacion", "Sin identificacion")
+                        kg_decomiso_map[sin_id] += peso_f
 
     total_elaborados = round(sum(kg_elaborados_map.values()), 2)
     total_decomiso = round(sum(kg_decomiso_map.values()), 2)
