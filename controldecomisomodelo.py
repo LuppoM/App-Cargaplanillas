@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import unicodedata
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from psycopg2.extras import RealDictCursor
@@ -345,6 +345,15 @@ def eliminar_decomiso(id_decomiso: int) -> bool:
             raise
 
 
+def _normalizar_texto(texto: str) -> str:
+    txt = str(texto or "").strip().lower()
+    txt = "".join(
+        c for c in unicodedata.normalize("NFD", txt)
+        if unicodedata.category(c) != "Mn"
+    )
+    return " ".join(txt.split())
+
+
 def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
     """
     Cruza Kg elaborados (public.planillas) vs Kg decomiso (public.decomisos)
@@ -353,20 +362,32 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
     with obtener_conexion() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             sectores_choco = _consultar_sectores_chocolate(cur)
-            mapa_oficial = {s.lower(): s for s in sectores_choco}
+            mapa_oficial = {_normalizar_texto(s): s for s in sectores_choco}
             cols_deco = _columnas_tabla(cur, "decomisos")
 
             kg_elaborados_map: Dict[str, float] = {s: 0.0 for s in sectores_choco}
             kg_decomiso_map: Dict[str, float] = {s: 0.0 for s in sectores_choco}
 
-            # 1. Kg elaborados desde public.planillas (usa centro_trabajo y kg_cajas_reales)
+            # Misma fórmula exacta que int(dt.strftime("%U")) + 1 en Python (domingo = inicio de semana)
+            expr_semana_pg = (
+                "(EXTRACT(DOY FROM fecha)::int - 1 "
+                "+ EXTRACT(DOW FROM DATE_TRUNC('year', fecha))::int) / 7 + 1"
+            )
+            # En strftime("%U"), los días previos al primer domingo del año son semana 0 (+1 = 1),
+            # y cada domingo suma 1:
+            expr_semana_python = (
+                "((EXTRACT(DOY FROM fecha)::int - 1 "
+                "- EXTRACT(DOW FROM fecha)::int + 7) / 7) + 1"
+            )
+
+            # 1. Kg elaborados desde public.planillas
             cur.execute(
-                """
+                f"""
                 SELECT TRIM(centro_trabajo) AS linea,
                        COALESCE(SUM(kg_cajas_reales), 0) AS total_kg
                 FROM public.planillas
                 WHERE EXTRACT(YEAR FROM fecha)::int = %s
-                  AND (EXTRACT(DOY FROM fecha)::int - 1 + EXTRACT(DOW FROM DATE_TRUNC('year', fecha))::int) / 7 + 1 = %s
+                  AND {expr_semana_python} = %s
                   AND LOWER(TRIM(COALESCE(planta, ''))) LIKE %s
                 GROUP BY TRIM(centro_trabajo);
                 """,
@@ -374,11 +395,24 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
             )
             for row in cur.fetchall():
                 kg_f = float(row["total_kg"] or 0)
-                key = str(row["linea"] or "").strip().lower()
+                key = _normalizar_texto(row["linea"])
+
                 if key in mapa_oficial:
                     kg_elaborados_map[mapa_oficial[key]] += kg_f
                 elif key.startswith("boiler") and "boiler" in mapa_oficial:
                     kg_elaborados_map[mapa_oficial["boiler"]] += kg_f
+                else:
+                    # Coincidencia parcial por si en sectores dice ej. "Moldeo" y en planillas "Moldeo Pascua"
+                    destino = next(
+                        (oficial for norm, oficial in mapa_oficial.items()
+                         if norm and norm != "sin identificacion" and (norm in key or key in norm)),
+                        None,
+                    )
+                    if destino:
+                        kg_elaborados_map[destino] += kg_f
+                    else:
+                        sin_id = mapa_oficial.get("sin identificacion", "Sin identificacion")
+                        kg_elaborados_map[sin_id] += kg_f
 
             # 2. Kg decomiso desde public.decomisos
             if cols_deco and "sector" in cols_deco and "peso" in cols_deco:
@@ -394,7 +428,7 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
                 if "n_semana" in cols_deco:
                     cond_deco.append("n_semana = %s")
                 else:
-                    cond_deco.append("(EXTRACT(DOY FROM fecha)::int - 1 + EXTRACT(DOW FROM DATE_TRUNC('year', fecha))::int) / 7 + 1 = %s")
+                    cond_deco.append(f"{expr_semana_python} = %s")
                 params_deco.append(n_semana)
 
                 if "planta" in cols_deco:
@@ -413,7 +447,7 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
                 )
                 for row in cur.fetchall():
                     peso_f = float(row["total_peso"] or 0)
-                    key = str(row["sector"] or "").strip().lower()
+                    key = _normalizar_texto(row["sector"])
                     if key in mapa_oficial:
                         kg_decomiso_map[mapa_oficial[key]] += peso_f
                     else:
@@ -430,7 +464,7 @@ def obtener_resumen_semanal(anio: int, n_semana: int) -> Dict[str, Any]:
         if deco <= 0:
             continue
 
-        if sec.lower() == "sin identificacion":
+        if _normalizar_texto(sec) == "sin identificacion":
             pct = round((deco / total_elaborados) * 100, 2) if total_elaborados > 0 else None
         else:
             pct = round((deco / elab) * 100, 2) if elab > 0 else None
