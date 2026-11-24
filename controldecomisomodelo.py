@@ -36,7 +36,7 @@ def _consultar_sectores_chocolate(cur) -> List[str]:
         """
         SELECT DISTINCT TRIM(nombre_sector) AS nombre_sector
         FROM public.sectores
-        WHERE LOWER(TRIM(COALESCE(planta, ''))) LIKE 'chocolate%'
+        WHERE LOWER(TRIM(COALESCE(planta, ''))) LIKE 'Chocolate%'
           AND TRANSLATE(UPPER(TRIM(COALESCE(area, ''))), 'ÁÉÍÓÚ', 'AEIOU') = 'PRODUCCION'
           AND nombre_sector IS NOT NULL
           AND TRIM(nombre_sector) <> ''
