@@ -602,7 +602,7 @@
         const inputFecha = document.getElementById("fecha");
         const selectTurno = document.getElementById("turno");
 
-        if (inputFecha) inputFecha.value = `${yyyy}-${mm}-${dd}`;
+        if (inputFecha) inputFecha.value = `${dd}-${mm}-${yyyy}`;
         if (selectTurno) selectTurno.value = turno;
     }
 
@@ -704,7 +704,7 @@
                 .map(t => t.centro_trabajo || t.sector)
                 .filter(Boolean)
                 .join(' / ');
-            inputDesc.value = `⚠️ Pertenece a: ${sectoresValidos || 'otro sector'}`;
+            inputDesc.value = `Pertenece a: ${sectoresValidos || 'otro sector'}`;
             inputDotacion.value = 0;
         }
 
@@ -1049,7 +1049,7 @@
             const yy = dt.getFullYear();
             const mm = String(dt.getMonth() + 1).padStart(2, '0');
             const dd = String(dt.getDate()).padStart(2, '0');
-            return `${yy}-${mm}-${dd}`;
+            return `${dd}-${mm}-${yy}`;
         };
 
         document.getElementById('pdfFechaDesde').value = fmtIso(fechaIni);
