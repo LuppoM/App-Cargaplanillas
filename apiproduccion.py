@@ -394,16 +394,16 @@ def generar_pdf_planillas(
             teoricos=teoricos,
         )
         etiqueta_planta = (planta or "Todas").strip().capitalize().replace(" ", "_")
-        nombre_archivo = f"Informe_Planillas_{etiqueta_planta}_{f_desde}_a_{f_hasta}.pdf"
+        nombre_archivo = f"Informe_Planillas_{etiqueta_planta}_{f_desde}_a_{f_hasta}.xlsx"
         return StreamingResponse(
             pdf_buffer,
-            media_type="application/pdf",
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={
                 "Content-Disposition": f'attachment; filename="{nombre_archivo}"'
             },
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al generar PDF de planillas: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al generar informe de planillas: {str(e)}")
 
 
 @app.get("/api/planillas/{planilla_id}")

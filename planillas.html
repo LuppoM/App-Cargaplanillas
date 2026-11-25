@@ -1113,55 +1113,55 @@
     }
 
     async function descargarPdfPlanillas() {
-        const fechaDesde = document.getElementById('pdfFechaDesde').value;
-        const fechaHasta = document.getElementById('pdfFechaHasta').value;
+    const fechaDesde = document.getElementById('pdfFechaDesde').value;
+    const fechaHasta = document.getElementById('pdfFechaHasta').value;
 
-        if (!fechaDesde || !fechaHasta) {
-            alert('Seleccioná ambas fechas (Desde y Hasta).');
-            return;
-        }
-        if (fechaDesde > fechaHasta) {
-            alert('La fecha "Desde" no puede ser mayor que la fecha "Hasta".');
-            return;
-        }
-
-        const btn = document.getElementById('btnDescargarPdfPlanillas');
-        const txtOrig = btn.innerText;
-        btn.disabled = true;
-        btn.innerText = '⏳ Generando...';
-
-        try {
-            const plantaParam = plantaActual.charAt(0).toUpperCase() + plantaActual.slice(1);
-            const params = new URLSearchParams({
-                fecha_desde: fechaDesde,
-                fecha_hasta: fechaHasta,
-                planta: plantaParam
-            });
-
-            const resp = await fetch(`/api/planillas/pdf?${params.toString()}`);
-            if (!resp.ok) {
-                const detalle = await resp.text();
-                throw new Error(`HTTP ${resp.status} - ${detalle}`);
-            }
-
-            const blob = await resp.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Informe_Planillas_${plantaParam}_${fechaDesde}_a_${fechaHasta}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-            cerrarModalPdfPlanillas();
-        } catch (err) {
-            console.error('Error al descargar PDF de planillas:', err);
-            alert(`No se pudo generar el informe PDF:\n${err.message}`);
-        } finally {
-            btn.disabled = false;
-            btn.innerText = txtOrig;
-        }
+    if (!fechaDesde || !fechaHasta) {
+        alert('Seleccioná ambas fechas (Desde y Hasta).');
+        return;
     }
+    if (fechaDesde > fechaHasta) {
+        alert('La fecha "Desde" no puede ser mayor que la fecha "Hasta".');
+        return;
+    }
+
+    const btn = document.getElementById('btnDescargarPdfPlanillas');
+    const txtOrig = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = '⏳ Generando...';
+
+    try {
+        const plantaParam = plantaActual.charAt(0).toUpperCase() + plantaActual.slice(1);
+        const params = new URLSearchParams({
+            fecha_desde: fechaDesde,
+            fecha_hasta: fechaHasta,
+            planta: plantaParam
+        });
+
+        const resp = await fetch(`/api/planillas/pdf?${params.toString()}`);
+        if (!resp.ok) {
+            const detalle = await resp.text();
+            throw new Error(`HTTP ${resp.status} - ${detalle}`);
+        }
+
+        const blob = await resp.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Informe_Planillas_${plantaParam}_${fechaDesde}_a_${fechaHasta}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        cerrarModalPdfPlanillas();
+    } catch (err) {
+        console.error('Error al descargar informe de planillas:', err);
+        alert(`No se pudo generar el informe:\n${err.message}`);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = txtOrig;
+    }
+}
 </script>
 </body>
 </html>
