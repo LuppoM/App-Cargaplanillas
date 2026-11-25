@@ -23,6 +23,7 @@ import cantidadentanques
 import controldecomisomodelo
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 import controldecomisopdf
+import teoricosmodelo
 
 # En apiproduccion.py
 app = FastAPI(title="API PRODUCCIÓN")
@@ -343,6 +344,19 @@ if __name__ == "__main__":
 
 # --- ENDPOINTS PLANILLAS ---
 
+def _normalizar_fecha_iso(valor) -> str:
+    if not valor:
+        return ""
+    s = str(valor).strip()[:10]
+    if "/" in s:
+        partes = s.split("/")
+        if len(partes) == 3 and len(partes[2]) == 4:
+            return f"{partes[2]}-{partes[1].zfill(2)}-{partes[0].zfill(2)}"
+    return s
+
+
+# --- ENDPOINTS PLANILLAS ---
+
 @app.get("/api/planillas")
 def listar_planillas(planta: Optional[str] = None):
     try:
@@ -351,6 +365,47 @@ def listar_planillas(planta: Optional[str] = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar planillas: {str(e)}")
 
+
+@app.get("/api/planillas/pdf")
+def generar_pdf_planillas(
+    fecha_desde: str,
+    fecha_hasta: str,
+    planta: Optional[str] = None,
+):
+    try:
+        f_desde = _normalizar_fecha_iso(fecha_desde)
+        f_hasta = _normalizar_fecha_iso(fecha_hasta)
+
+        registros = planillasmodelo.obtener_planillas(planta)
+        filtrados = [
+            r for r in registros
+            if f_desde <= _normalizar_fecha_iso(r.get("fecha")) <= f_hasta
+        ]
+
+        teoricos = []
+        if "teoricosmodelo" in globals() and hasattr(teoricosmodelo, "obtener_teoricos"):
+            teoricos = teoricosmodelo.obtener_teoricos()
+
+        pdf_buffer = informeplanillaspdf.generar_pdf_informe_planillas(
+            registros=filtrados,
+            fecha_desde=f_desde,
+            fecha_hasta=f_hasta,
+            planta=planta,
+            teoricos=teoricos,
+        )
+        etiqueta_planta = (planta or "Todas").strip().capitalize().replace(" ", "_")
+        nombre_archivo = f"Informe_Planillas_{etiqueta_planta}_{f_desde}_a_{f_hasta}.pdf"
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{nombre_archivo}"'
+            },
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al generar PDF de planillas: {str(e)}")
+
+
 @app.get("/api/planillas/{planilla_id}")
 def obtener_planilla(planilla_id: int):
     registro = planillasmodelo.obtener_planilla_por_id(planilla_id)
@@ -358,15 +413,16 @@ def obtener_planilla(planilla_id: int):
         raise HTTPException(status_code=404, detail="Registro de planilla no encontrado")
     return {"ok": True, "datos": registro}
 
+
 @app.post("/api/planillas")
 def crear_planilla(payload: PlanillaSchema):
     try:
-        # Pydantic v2 usa model_dump(), mantengo dict() con fallback por compatibilidad
         datos_dict = payload.model_dump() if hasattr(payload, 'model_dump') else payload.dict()
         nuevo_id = planillasmodelo.insertar_planilla(datos_dict)
         return {"ok": True, "id": nuevo_id, "mensaje": "Planilla registrada correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al guardar la planilla: {str(e)}")
+
 
 @app.put("/api/planillas/{planilla_id}")
 def modificar_planilla(planilla_id: int, payload: PlanillaSchema):
@@ -381,6 +437,7 @@ def modificar_planilla(planilla_id: int, payload: PlanillaSchema):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al actualizar la planilla: {str(e)}")
 
+
 @app.delete("/api/planillas/{planilla_id}")
 def borrar_planilla(planilla_id: int):
     registro = planillasmodelo.obtener_planilla_por_id(planilla_id)
@@ -392,35 +449,6 @@ def borrar_planilla(planilla_id: int):
         return {"ok": True, "mensaje": "Planilla eliminada correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al borrar la planilla: {str(e)}")
-@app.get("/api/planillas/pdf")
-def generar_pdf_planillas(
-    fecha_desde: str,
-    fecha_hasta: str,
-    planta: Optional[str] = None,
-):
-    try:
-        registros = planillasmodelo.obtener_planillas(planta)
-        filtrados = [
-            r for r in registros
-            if fecha_desde <= str(r.get("fecha") or "")[:10] <= fecha_hasta
-        ]
-        pdf_buffer = informeplanillaspdf.generar_pdf_informe_planillas(
-            registros=filtrados,
-            fecha_desde=fecha_desde,
-            fecha_hasta=fecha_hasta,
-            planta=planta,
-        )
-        etiqueta_planta = (planta or "Todas").strip().replace(" ", "_")
-        nombre_archivo = f"Informe_Planillas_{etiqueta_planta}_{fecha_desde}_a_{fecha_hasta}.pdf"
-        return StreamingResponse(
-            pdf_buffer,
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{nombre_archivo}"'
-            },
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al generar PDF de planillas: {str(e)}")
     
    # --- ENDPOINTS NIVELES TANQUE ---
 
