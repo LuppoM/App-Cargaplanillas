@@ -47,7 +47,7 @@
             <a href="/Teoricos" class="nav-btn" data-modulo="teoricos">TEÓRICOS</a>
             <a href="/ntanque" class="nav-btn" data-modulo="tanques">NIVELES DE TANQUE</a>
             <a href="/planillas" class="nav-btn" data-modulo="planillas">CARGA PLANILLAS</a>
-            <a href="/controldecomiso" class="nav-btn" data-modulo="planillas">CONTROL DECOMISO</a>
+            <a href="/controldecomiso" class="nav-btn" data-modulo="controldecomiso">CONTROL DECOMISO</a>
 
             <div class="dropdown" data-modulo="parametros">
                 <button class="nav-btn" onclick="toggleDropdown(event, 'menuParametros')">
@@ -117,10 +117,11 @@
                     headers: { 'X-Usuario': usuarioActual.usuario }
                 });
                 if (resp.ok) {
-                    const lista = await resp.json();
-                    const actualizado = lista.find(
-                        u => u.id === usuarioActual.id || u.usuario.toLowerCase() === usuarioActual.usuario.toLowerCase()
-                    );
+                const data = await resp.json();
+                const lista = Array.isArray(data) ? data : (data.datos || []);
+                const actualizado = lista.find(
+                    u => u.id === usuarioActual.id || u.usuario.toLowerCase() === usuarioActual.usuario.toLowerCase()
+                );
                     if (actualizado) {
                         const nuevaSesion = {
                             ...usuarioActual,
