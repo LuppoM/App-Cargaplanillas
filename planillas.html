@@ -336,6 +336,39 @@
     let listaTeoricosGlobal = [];
     let idSeleccionado = null;
 
+    // Helpers de fecha (compatibles con BD en YYYY-MM-DD o DD/MM/YYYY)
+    function hoyLocalIso() {
+        const ahora = new Date();
+        const yyyy = ahora.getFullYear();
+        const mm = String(ahora.getMonth() + 1).padStart(2, '0');
+        const dd = String(ahora.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function isoADmy(fechaIso) {
+        if (!fechaIso) return '';
+        const s = String(fechaIso).trim().slice(0, 10);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+            const [y, m, d] = s.split('-');
+            return `${d}/${m}/${y}`;
+        }
+        return s;
+    }
+
+    function dmyAIso(fechaDmy) {
+        if (!fechaDmy) return '';
+        const s = String(fechaDmy).trim().slice(0, 10);
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+            const [d, m, y] = s.split('/');
+            return `${y}-${m}-${d}`;
+        }
+        if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
+            const [d, m, y] = s.split('-');
+            return `${y}-${m}-${d}`;
+        }
+        return s;
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
         await cargarBaseDatosAuxiliares();
         cargarPlanillas();
@@ -602,7 +635,8 @@
         const inputFecha = document.getElementById("fecha");
         const selectTurno = document.getElementById("turno");
 
-        if (inputFecha) inputFecha.value = `${dd}-${mm}-${yyyy}`;
+        // <input type="date"> siempre exige YYYY-MM-DD internamente
+        if (inputFecha) inputFecha.value = `${yyyy}-${mm}-${dd}`;
         if (selectTurno) selectTurno.value = turno;
     }
 
@@ -624,7 +658,7 @@
 
             tr.innerHTML = `
                 <td>${item.id}</td>
-                <td>${item.fecha}</td>
+                <td>${isoADmy(item.fecha)}</td>
                 <td><strong>${item.planta}</strong></td>
                 <td>${item.centro_trabajo}</td>
                 <td>${item.codigo}</td>
@@ -753,7 +787,7 @@
         }
 
         document.getElementById('planilla-id').value = r.id;
-        document.getElementById('fecha').value = r.fecha;
+        document.getElementById('fecha').value = dmyAIso(r.fecha);
         document.getElementById('turno').value = r.turno;
         
         poblarComboSectores();
@@ -930,7 +964,7 @@
             const textoFila = fila.innerText.toLowerCase();
             const coincideTexto = !textoBusqueda || textoFila.includes(textoBusqueda);
             
-            const celdaFecha = fila.children[1] ? fila.children[1].innerText : '';
+            const celdaFecha = fila.children[1] ? dmyAIso(fila.children[1].innerText) : '';
             const coincideFecha = !fechaBusqueda || celdaFecha === fechaBusqueda;
 
             if (coincideTexto && coincideFecha) {
@@ -960,7 +994,7 @@
             const planilla = json.datos || {};
             const detenciones = planilla.detenciones || [];
 
-            titulo.innerText = `Detenciones - Planilla #${id} (${planilla.centro_trabajo || ''} | ${planilla.fecha || ''})`;
+            titulo.innerText = `Detenciones - Planilla #${id} (${planilla.centro_trabajo || ''} | ${isoADmy(planilla.fecha) || ''})`;
 
             if (detenciones.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="padding:14px; text-align:center; color:#64748b;">Esta planilla no tiene detenciones registradas.</td></tr>';
@@ -1020,7 +1054,7 @@
 
     // --- FUNCIONES INFORME PDF POR RANGO DE FECHAS ---
     function abrirModalPdfPlanillas() {
-        const hoy = new Date().toISOString().slice(0, 10);
+        const hoy = hoyLocalIso();
         const filtroFecha = document.getElementById('filtro-fecha')?.value;
         const fechaBase = filtroFecha || hoy;
 
@@ -1038,7 +1072,7 @@
 
     function setearRangoRapidoPdf(dias) {
         const filtroFecha = document.getElementById('filtro-fecha')?.value;
-        const baseStr = filtroFecha || new Date().toISOString().slice(0, 10);
+        const baseStr = filtroFecha || hoyLocalIso();
         const [y, m, d] = baseStr.split('-').map(Number);
 
         const fechaFin = new Date(y, m - 1, d);
@@ -1049,7 +1083,8 @@
             const yy = dt.getFullYear();
             const mm = String(dt.getMonth() + 1).padStart(2, '0');
             const dd = String(dt.getDate()).padStart(2, '0');
-            return `${dd}-${mm}-${yy}`;
+            // <input type="date"> siempre exige YYYY-MM-DD
+            return `${yy}-${mm}-${dd}`;
         };
 
         document.getElementById('pdfFechaDesde').value = fmtIso(fechaIni);
@@ -1105,7 +1140,8 @@
 
             const resp = await fetch(`/api/planillas/pdf?${params.toString()}`);
             if (!resp.ok) {
-                throw new Error(`Error HTTP ${resp.status}`);
+                const detalle = await resp.text();
+                throw new Error(`HTTP ${resp.status} - ${detalle}`);
             }
 
             const blob = await resp.blob();
@@ -1120,7 +1156,7 @@
             cerrarModalPdfPlanillas();
         } catch (err) {
             console.error('Error al descargar PDF de planillas:', err);
-            alert('No se pudo generar el informe PDF de planillas.');
+            alert(`No se pudo generar el informe PDF:\n${err.message}`);
         } finally {
             btn.disabled = false;
             btn.innerText = txtOrig;
