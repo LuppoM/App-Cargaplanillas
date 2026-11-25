@@ -49,16 +49,59 @@ def _sumar_detenciones_fila(reg: Dict[str, Any]) -> float:
     return sum(float(reg.get(col) or 0) for col in COLS_DETENCION)
 
 
+def _buscar_teorico(
+    teoricos: List[Dict[str, Any]],
+    codigo: Any,
+    centro_trabajo: Any,
+) -> Optional[Dict[str, Any]]:
+    cod = str(codigo or "").strip().lower()
+    sec = str(centro_trabajo or "").strip().lower()
+    if not cod or not teoricos:
+        return None
+
+    if sec:
+        for t in teoricos:
+            cod_m = str(t.get("codigo") or "").strip().lower() == cod
+            sec_t = str(t.get("centro_trabajo") or t.get("sector") or "").strip().lower()
+            if cod_m and sec_t == sec:
+                return t
+
+    for t in teoricos:
+        if str(t.get("codigo") or "").strip().lower() == cod:
+            return t
+    return None
+
+
+def _calcular_kg_reales(
+    reg: Dict[str, Any],
+    teoricos: Optional[List[Dict[str, Any]]] = None,
+) -> float:
+    cantidad = float(reg.get("kg_cajas_reales") or 0)
+    if not teoricos:
+        return cantidad
+
+    teorico = _buscar_teorico(teoricos, reg.get("codigo"), reg.get("centro_trabajo"))
+    if not teorico:
+        return cantidad
+
+    uxb = float(teorico.get("uxb") or 0)
+    peso_input = float(reg.get("peso_promedio_unid_kg") or 0)
+    peso = peso_input if peso_input > 0 else float(teorico.get("peso") or 0)
+
+    peso_por_caja = uxb * peso
+    if peso_por_caja > 0 and uxb > 1:
+        return cantidad * peso_por_caja
+
+    return cantidad
+
+
 def generar_pdf_informe_planillas(
     registros: List[Dict[str, Any]],
     fecha_desde: str,
     fecha_hasta: str,
     planta: Optional[str] = None,
+    teoricos: Optional[List[Dict[str, Any]]] = None,
 ) -> BytesIO:
-    """
-    Genera en memoria el PDF del informe de planillas diarias filtrado
-    por rango de fechas (fecha_desde .. fecha_hasta) y planta opcional.
-    """
     buffer = BytesIO()
     planta_titulo = planta.strip().upper() if planta and planta.strip() else "TODAS LAS PLANTAS"
     f_desde_txt = _fmt_fecha(fecha_desde)
@@ -108,7 +151,6 @@ def generar_pdf_informe_planillas(
         textColor=colors.HexColor("#1e293b"),
     )
 
-    # Totales generales y agrupación por centro de trabajo
     total_kg = 0.0
     total_hs = 0.0
     total_deco = 0.0
@@ -129,14 +171,16 @@ def generar_pdf_informe_planillas(
         }
     )
 
+    filas_procesadas: List[Dict[str, Any]] = []
+
     for r in registros:
-        f_iso = str(r.get("fecha") or "")[:10]
-        if f_iso:
-            fechas_distintas.add(f_iso)
+        f_txt = _fmt_fecha(r.get("fecha"))
+        if f_txt:
+            fechas_distintas.add(f_txt)
 
         sector = str(r.get("centro_trabajo") or "Sin especificar").strip()
         hs = float(r.get("horas_trabajadas") or 0)
-        kg = float(r.get("kg_cajas_reales") or 0)
+        kg = _calcular_kg_reales(r, teoricos)
         deco = float(r.get("decomiso_kg") or 0)
         repro = float(r.get("reproceso_kg") or 0)
         scrap = float(r.get("scrap_flex_kg") or 0)
@@ -157,9 +201,14 @@ def generar_pdf_informe_planillas(
         agrupado[sector]["scrap"] += scrap
         agrupado[sector]["detenciones"] += deten
 
+        filas_procesadas.append({
+            **r,
+            "_kg_real_calc": kg,
+            "_deten_min_calc": deten,
+        })
+
     elementos: List[Any] = []
 
-    # Encabezado
     elementos.append(Paragraph(f"INFORME DE PRODUCCIÓN Y PLANILLAS DIARIAS · {planta_titulo}", estilo_titulo))
     fecha_emision = datetime.now().strftime("%d/%m/%Y %H:%M")
     elementos.append(
@@ -171,7 +220,6 @@ def generar_pdf_informe_planillas(
         )
     )
 
-    # Cuadro de KPIs principales (ancho total apaisado: 273 mm)
     tabla_kpi = Table(
         [
             [
@@ -217,7 +265,6 @@ def generar_pdf_informe_planillas(
     elementos.append(tabla_kpi)
     elementos.append(Spacer(1, 5 * mm))
 
-    # Sección 1: Consolidado por Centro de Trabajo
     elementos.append(Paragraph("1. Consolidado por Centro de Trabajo / Sector", estilo_seccion))
 
     filas_resumen = [
@@ -289,7 +336,6 @@ def generar_pdf_informe_planillas(
     elementos.append(tabla_resumen)
     elementos.append(Spacer(1, 5 * mm))
 
-    # Sección 2: Detalle de Planillas del Período
     elementos.append(Paragraph("2. Detalle de Registros del Período", estilo_seccion))
 
     filas_detalle = [
@@ -308,9 +354,9 @@ def generar_pdf_informe_planillas(
         ]
     ]
 
-    if registros:
+    if filas_procesadas:
         registros_ordenados = sorted(
-            registros,
+            filas_procesadas,
             key=lambda x: (str(x.get("fecha") or ""), str(x.get("turno") or ""), str(x.get("centro_trabajo") or "")),
         )
         for r in registros_ordenados:
@@ -322,11 +368,11 @@ def generar_pdf_informe_planillas(
                     str(r.get("codigo") or ""),
                     _fmt_num(r.get("horas_trabajadas")),
                     _fmt_num(r.get("dotacion_real"), 0),
-                    _fmt_num(r.get("kg_cajas_reales")),
+                    _fmt_num(r.get("_kg_real_calc")),
                     _fmt_num(r.get("decomiso_kg")),
                     _fmt_num(r.get("reproceso_kg")),
                     _fmt_num(r.get("scrap_flex_kg")),
-                    _fmt_num(_sumar_detenciones_fila(r), 0),
+                    _fmt_num(r.get("_deten_min_calc"), 0),
                 ]
             )
     else:
