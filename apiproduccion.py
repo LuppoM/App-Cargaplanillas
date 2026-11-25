@@ -22,7 +22,7 @@ from abmusuariosmodelo import abmusuariosmodelo
 import cantidadentanques
 import controldecomisomodelo
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-
+import controldecomisopdf
 
 # En apiproduccion.py
 app = FastAPI(title="API PRODUCCIÓN")
@@ -640,3 +640,32 @@ def api_eliminar_decomiso(id_decomiso: int):
     if not ok:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
     return {"ok": True}
+@app.get("/api/decomisos/pdf")
+def api_decomisos_pdf(
+    anio: int,
+    n_semana: int,
+    sector: Optional[str] = None,
+):
+    resumen = controldecomisomodelo.obtener_resumen_semanal(
+        anio=anio,
+        n_semana=n_semana,
+    )
+    registros = controldecomisomodelo.listar_decomisos(
+        anio=anio,
+        n_semana=n_semana,
+        sector=sector,
+        limite=1000,
+    )
+    pdf_buffer = controldecomisopdf.generar_pdf_informe_decomisos(
+        resumen=resumen,
+        registros=registros,
+    )
+    nombre_archivo = f"Informe_Decomisos_Chocolate_{anio}_Semana_{n_semana}.pdf"
+
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{nombre_archivo}"'
+        },
+    )

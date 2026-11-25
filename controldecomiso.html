@@ -163,12 +163,14 @@
         }
 
         function obtenerSemanaExcel(fechaStr) {
+            // Domingo = inicio de semana. Si el año empieza en domingo -> Semana 1;
+            // si no empieza en domingo, los primeros días son Semana 0 y la primera semana entera = Semana 1.
             const [y, m, d] = fechaStr.split('-').map(Number);
             const fecha = new Date(y, m - 1, d);
             const inicioAnio = new Date(y, 0, 1);
             const diaSemanaInicio = inicioAnio.getDay();
             const diasTranscurridos = Math.floor((fecha - inicioAnio) / 86400000);
-            const nSemana = Math.floor((diasTranscurridos + diaSemanaInicio) / 7) + 1;
+            const nSemana = Math.floor((diasTranscurridos + diaSemanaInicio) / 7);
             return { anio: y, mes: m, n_semana: nSemana };
         }
 
@@ -453,10 +455,58 @@
             }
         }
 
-        function descargarPdfInforme() {
+        async function descargarPdfInforme() {
             const anio = document.getElementById('filtroAnio').value;
             const semana = document.getElementById('filtroSemana').value;
-            window.open(`/api/decomisos/pdf?anio=${anio}&n_semana=${semana}`, '_blank');
+            const sector = document.getElementById('filtroSector')?.value || 'TODOS';
+
+            if (!semana) {
+                alert('Seleccioná una semana válida antes de generar el PDF.');
+                return;
+            }
+
+            const btn = document.querySelector('button[onclick*="descargarPdfInforme"]');
+            const textoOriginal = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '⏳ Generando PDF...';
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    anio: String(anio),
+                    n_semana: String(semana),
+                    sector: String(sector)
+                });
+
+                const res = await fetch(`/api/decomisos/pdf?${params.toString()}`, {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    headers: obtenerHeaders()
+                });
+
+                if (!res.ok) {
+                    throw new Error(`Error HTTP ${res.status}`);
+                }
+
+                const blob = await res.blob();
+                const urlBlob = window.URL.createObjectURL(blob);
+                const enlace = document.createElement('a');
+                enlace.href = urlBlob;
+                enlace.download = `Informe_Decomisos_Chocolate_${anio}_Semana_${semana}.pdf`;
+                document.body.appendChild(enlace);
+                enlace.click();
+                enlace.remove();
+                window.URL.revokeObjectURL(urlBlob);
+            } catch (err) {
+                console.error('Error al generar PDF:', err);
+                alert('No se pudo generar el PDF del informe.');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = textoOriginal;
+                }
+            }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
