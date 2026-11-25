@@ -20,6 +20,7 @@
         <div class="toolstrip-group">
             <button class="btn-tool" onclick="abrirFormulario()">+ Nueva Planilla</button>
             <button class="btn-tool btn-tool-edit" onclick="modificarSeleccionada()">Modificar Planilla</button>
+            <button type="button" class="btn-tool" style="background-color:#ea580c; border-color:#ea580c; color:#fff;" onclick="abrirModalPdfPlanillas()">📄 Generar Informe PDF</button>
             <button class="btn-tool btn-tool-back" onclick="window.location.href='/'">Volver</button>
         </div>
         <div class="toolstrip-group">
@@ -295,6 +296,39 @@
         </div>
     </div>
 
+    <!-- Modal Selector de Rango de Fechas para Informe PDF -->
+    <div id="modal-pdf-planillas" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:10px; width:92%; max-width:380px; padding:22px; box-shadow:0 12px 28px rgba(0,0,0,0.25);">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:10px; margin-bottom:14px;">
+                <h3 id="titulo-modal-pdf" style="margin:0; color:#0f172a; font-size:1.05rem;">Generar Informe PDF</h3>
+                <button type="button" onclick="cerrarModalPdfPlanillas()" style="background:none; border:none; font-size:1.3rem; cursor:pointer; color:#64748b;">&times;</button>
+            </div>
+
+            <div style="display:flex; gap:6px; margin-bottom:12px;">
+                <button type="button" onclick="setearRangoRapidoPdf(1)" style="flex:1; padding:5px 8px; font-size:0.8rem; border:1px solid #cbd5e1; background:#f8fafc; border-radius:6px; cursor:pointer;">1 día</button>
+                <button type="button" onclick="setearRangoRapidoPdf(7)" style="flex:1; padding:5px 8px; font-size:0.8rem; border:1px solid #cbd5e1; background:#f8fafc; border-radius:6px; cursor:pointer;">Últimos 7 días</button>
+                <button type="button" onclick="setearRangoRapidoPdf(30)" style="flex:1; padding:5px 8px; font-size:0.8rem; border:1px solid #cbd5e1; background:#f8fafc; border-radius:6px; cursor:pointer;">Últimos 30 días</button>
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label for="pdfFechaDesde" style="display:block; font-size:0.85rem; font-weight:600; color:#334155; margin-bottom:4px;">Fecha Desde</label>
+                <input type="date" id="pdfFechaDesde" onchange="actualizarResumenDiasPdf()" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label for="pdfFechaHasta" style="display:block; font-size:0.85rem; font-weight:600; color:#334155; margin-bottom:4px;">Fecha Hasta</label>
+                <input type="date" id="pdfFechaHasta" onchange="actualizarResumenDiasPdf()" style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+
+            <p id="info-dias-pdf" style="margin:0 0 16px; font-size:0.82rem; color:#0369a1; font-weight:600;"></p>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #e2e8f0; padding-top:12px;">
+                <button type="button" onclick="cerrarModalPdfPlanillas()" style="padding:8px 14px; border:1px solid #cbd5e1; background:#f8fafc; color:#334155; border-radius:6px; cursor:pointer;">Cancelar</button>
+                <button type="button" id="btnDescargarPdfPlanillas" onclick="descargarPdfPlanillas()" style="padding:8px 16px; border:none; background:#ea580c; color:#fff; font-weight:600; border-radius:6px; cursor:pointer;">📄 Descargar PDF</button>
+            </div>
+        </div>
+    </div>
+
 <script>
     let plantaActual = 'chocolate';
     let datosGlobales = [];
@@ -382,6 +416,7 @@
             const resJson = await res.json();
             datosGlobales = Array.isArray(resJson) ? resJson : (resJson.datos || []);
             renderizarTabla();
+            aplicarFiltros();
         } catch (e) {
             console.error("Error al cargar planillas:", e);
         }
@@ -737,7 +772,6 @@
         document.getElementById('reproceso_kg').value = r.reproceso_kg;
         document.getElementById('scrap_flex_kg').value = r.scrap_flex_kg;
 
-        // Cargar minutos desde planillas y limpiar observaciones
         const keys = [
             'produccion', 'refrigerio', 'mecanico', 'electrico',
             'calidad', 'programacion', 'limpieza', 'abastecimiento',
@@ -750,7 +784,6 @@
             if (elObs) elObs.value = '';
         });
 
-        // Cargar observaciones (y minutos si existen) desde planillas_detenciones
         const mapTallerToKey = {
             'produccion': 'produccion', 'producción': 'produccion',
             'refrigerio': 'refrigerio',
@@ -983,6 +1016,115 @@
         });
 
         calcularKPIsEnTiempoReal();
+    }
+
+    // --- FUNCIONES INFORME PDF POR RANGO DE FECHAS ---
+    function abrirModalPdfPlanillas() {
+        const hoy = new Date().toISOString().slice(0, 10);
+        const filtroFecha = document.getElementById('filtro-fecha')?.value;
+        const fechaBase = filtroFecha || hoy;
+
+        document.getElementById('titulo-modal-pdf').innerText = `Informe PDF · Planta ${plantaActual.toUpperCase()}`;
+        document.getElementById('pdfFechaDesde').value = fechaBase;
+        document.getElementById('pdfFechaHasta').value = fechaBase;
+        actualizarResumenDiasPdf();
+
+        document.getElementById('modal-pdf-planillas').style.display = 'flex';
+    }
+
+    function cerrarModalPdfPlanillas() {
+        document.getElementById('modal-pdf-planillas').style.display = 'none';
+    }
+
+    function setearRangoRapidoPdf(dias) {
+        const filtroFecha = document.getElementById('filtro-fecha')?.value;
+        const baseStr = filtroFecha || new Date().toISOString().slice(0, 10);
+        const [y, m, d] = baseStr.split('-').map(Number);
+
+        const fechaFin = new Date(y, m - 1, d);
+        const fechaIni = new Date(y, m - 1, d);
+        fechaIni.setDate(fechaIni.getDate() - (dias - 1));
+
+        const fmtIso = (dt) => {
+            const yy = dt.getFullYear();
+            const mm = String(dt.getMonth() + 1).padStart(2, '0');
+            const dd = String(dt.getDate()).padStart(2, '0');
+            return `${yy}-${mm}-${dd}`;
+        };
+
+        document.getElementById('pdfFechaDesde').value = fmtIso(fechaIni);
+        document.getElementById('pdfFechaHasta').value = fmtIso(fechaFin);
+        actualizarResumenDiasPdf();
+    }
+
+    function actualizarResumenDiasPdf() {
+        const d1 = document.getElementById('pdfFechaDesde').value;
+        const d2 = document.getElementById('pdfFechaHasta').value;
+        const info = document.getElementById('info-dias-pdf');
+        if (!d1 || !d2) {
+            info.innerText = '';
+            return;
+        }
+        const f1 = new Date(`${d1}T00:00:00`);
+        const f2 = new Date(`${d2}T00:00:00`);
+        const diff = Math.round((f2 - f1) / 86400000) + 1;
+        if (diff <= 0) {
+            info.style.color = '#dc2626';
+            info.innerText = '⚠️ La fecha "Desde" debe ser anterior o igual a "Hasta".';
+        } else {
+            info.style.color = '#0369a1';
+            info.innerText = `Período seleccionado: ${diff} día${diff === 1 ? '' : 's'}`;
+        }
+    }
+
+    async function descargarPdfPlanillas() {
+        const fechaDesde = document.getElementById('pdfFechaDesde').value;
+        const fechaHasta = document.getElementById('pdfFechaHasta').value;
+
+        if (!fechaDesde || !fechaHasta) {
+            alert('Seleccioná ambas fechas (Desde y Hasta).');
+            return;
+        }
+        if (fechaDesde > fechaHasta) {
+            alert('La fecha "Desde" no puede ser mayor que la fecha "Hasta".');
+            return;
+        }
+
+        const btn = document.getElementById('btnDescargarPdfPlanillas');
+        const txtOrig = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = '⏳ Generando...';
+
+        try {
+            const plantaParam = plantaActual.charAt(0).toUpperCase() + plantaActual.slice(1);
+            const params = new URLSearchParams({
+                fecha_desde: fechaDesde,
+                fecha_hasta: fechaHasta,
+                planta: plantaParam
+            });
+
+            const resp = await fetch(`/api/planillas/pdf?${params.toString()}`);
+            if (!resp.ok) {
+                throw new Error(`Error HTTP ${resp.status}`);
+            }
+
+            const blob = await resp.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Informe_Planillas_${plantaParam}_${fechaDesde}_a_${fechaHasta}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            cerrarModalPdfPlanillas();
+        } catch (err) {
+            console.error('Error al descargar PDF de planillas:', err);
+            alert('No se pudo generar el informe PDF de planillas.');
+        } finally {
+            btn.disabled = false;
+            btn.innerText = txtOrig;
+        }
     }
 </script>
 </body>

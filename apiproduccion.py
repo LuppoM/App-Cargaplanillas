@@ -2,7 +2,7 @@ from datetime import date
 from io import BytesIO
 import os
 from typing import Optional
-
+import informeplanillaspdf
 from fastapi import Body, FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -392,6 +392,35 @@ def borrar_planilla(planilla_id: int):
         return {"ok": True, "mensaje": "Planilla eliminada correctamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al borrar la planilla: {str(e)}")
+@app.get("/api/planillas/pdf")
+def generar_pdf_planillas(
+    fecha_desde: str,
+    fecha_hasta: str,
+    planta: Optional[str] = None,
+):
+    try:
+        registros = planillasmodelo.obtener_planillas(planta)
+        filtrados = [
+            r for r in registros
+            if fecha_desde <= str(r.get("fecha") or "")[:10] <= fecha_hasta
+        ]
+        pdf_buffer = informeplanillaspdf.generar_pdf_informe_planillas(
+            registros=filtrados,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            planta=planta,
+        )
+        etiqueta_planta = (planta or "Todas").strip().replace(" ", "_")
+        nombre_archivo = f"Informe_Planillas_{etiqueta_planta}_{fecha_desde}_a_{fecha_hasta}.pdf"
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{nombre_archivo}"'
+            },
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al generar PDF de planillas: {str(e)}")
     
    # --- ENDPOINTS NIVELES TANQUE ---
 
